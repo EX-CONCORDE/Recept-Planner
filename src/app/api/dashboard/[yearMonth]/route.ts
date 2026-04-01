@@ -13,6 +13,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
   const [year, month] = yearMonth.split("-").map(Number);
   const start = new Date(year, month - 1, 1);
   const end = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month, 0).getDate();
 
   const [plan, transactions] = await Promise.all([
     prisma.monthlyPlan.findUnique({ where: { yearMonth } }),
@@ -59,6 +60,32 @@ export async function GET(_request: NextRequest, { params }: Params) {
       ),
   ).sort((a, b) => b.total - a.total);
 
+  // 日別支出集計（折れ線グラフ用）
+  const dailyExpenseMap: Record<number, number> = {};
+  for (const t of transactions.filter((t) => t.txType === "expense")) {
+    const day = new Date(t.txDate).getDate();
+    dailyExpenseMap[day] = (dailyExpenseMap[day] ?? 0) + t.amount;
+  }
+
+  // 日別データ（累積も計算）
+  const dailyTrend: Array<{
+    day: number;
+    date: string;
+    daily: number;
+    cumulative: number;
+  }> = [];
+  let cumulative = 0;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const daily = dailyExpenseMap[d] ?? 0;
+    cumulative += daily;
+    const dateStr = `${month}/${d}`;
+    dailyTrend.push({ day: d, date: dateStr, daily, cumulative });
+  }
+
+  // 理想ペースライン（使用可能額を日割り）
+  const idealDailyBudget =
+    spendableAmount > 0 ? spendableAmount / daysInMonth : 0;
+
   return success({
     yearMonth,
     monthlyIncome,
@@ -70,6 +97,9 @@ export async function GET(_request: NextRequest, { params }: Params) {
     usageRate,
     isOverBudget: remaining < 0,
     byCategory,
+    dailyTrend,
+    idealDailyBudget,
+    daysInMonth,
     recentTransactions: transactions.slice(0, 10),
   });
 }

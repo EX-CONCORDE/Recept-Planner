@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { BudgetOverview } from "@/components/dashboard/budget-overview";
 import { CategoryChart } from "@/components/dashboard/category-chart";
 import { CategoryBarChart } from "@/components/dashboard/category-bar-chart";
+import { DailyTrendChart } from "@/components/dashboard/daily-trend-chart";
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { MonthSelector } from "@/components/layout/month-selector";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,6 +28,14 @@ interface DashboardData {
     total: number;
     count: number;
   }[];
+  dailyTrend: {
+    day: number;
+    date: string;
+    daily: number;
+    cumulative: number;
+  }[];
+  idealDailyBudget: number;
+  daysInMonth: number;
   recentTransactions: {
     id: number;
     txType: string;
@@ -100,6 +109,12 @@ export default function DashboardPage() {
             remaining={data.remaining}
             usageRate={data.usageRate}
             isOverBudget={data.isOverBudget}
+          />
+          <DailyTrendChart
+            data={data.dailyTrend}
+            idealDailyBudget={data.idealDailyBudget}
+            spendableAmount={data.spendableAmount}
+            daysInMonth={data.daysInMonth}
           />
           <CategoryChart data={data.byCategory} />
           <CategoryBarChart data={data.byCategory} />
