@@ -1,0 +1,35 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://recept:${POSTGRES_PASSWORD}@db:5432/recept_planner
+      - LMSTUDIO_BASE_URL=${LMSTUDIO_BASE_URL}
+      - LMSTUDIO_MODEL=${LMSTUDIO_MODEL:-gemma-3-12b}
+      - RECEIPT_STORAGE_PATH=/app/data/receipts
+    volumes:
+      - receipt_data:/app/data/receipts
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: recept
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: recept_planner
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U recept -d recept_planner"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+  receipt_data:
