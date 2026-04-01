@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { formatYen, formatDate, getCurrentYearMonth } from "@/lib/format";
+import { MonthSelector } from "@/components/layout/month-selector";
 import { toast } from "sonner";
 import { Trash2, Plus } from "lucide-react";
 
@@ -195,14 +196,7 @@ export default function ExpensesPage() {
         </Card>
       )}
 
-      <div className="space-y-1">
-        <Label>表示月</Label>
-        <Input
-          type="month"
-          value={yearMonth}
-          onChange={(e) => setYearMonth(e.target.value)}
-        />
-      </div>
+      <MonthSelector yearMonth={yearMonth} onChange={setYearMonth} />
 
       {loading ? (
         <div className="flex items-center justify-center py-12">
