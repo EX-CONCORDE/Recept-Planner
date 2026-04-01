@@ -75,9 +75,9 @@ export default function DashboardPage() {
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         </div>
       ) : data ? (
-        <div className="space-y-4">
+        <>
           {data.monthlyIncome === 0 && data.totalExpenses === 0 && (
-            <Card className="border-dashed">
+            <Card className="border-dashed mb-4">
               <CardContent className="py-6 text-center space-y-3">
                 <p className="text-sm text-muted-foreground">
                   はじめに月収と貯金目標を設定しましょう
@@ -101,25 +101,36 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           )}
-          <BudgetOverview
-            monthlyIncome={data.monthlyIncome}
-            savingTargetAmount={data.savingTargetAmount}
-            spendableAmount={data.spendableAmount}
-            totalExpenses={data.totalExpenses}
-            remaining={data.remaining}
-            usageRate={data.usageRate}
-            isOverBudget={data.isOverBudget}
-          />
-          <DailyTrendChart
-            data={data.dailyTrend}
-            idealDailyBudget={data.idealDailyBudget}
-            spendableAmount={data.spendableAmount}
-            daysInMonth={data.daysInMonth}
-          />
-          <CategoryChart data={data.byCategory} />
-          <CategoryBarChart data={data.byCategory} />
-          <RecentTransactions transactions={data.recentTransactions} />
-        </div>
+
+          {/* PC: 2カラムグリッド / スマホ: 1カラム */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* 左カラム: 予算概要 + トレンド */}
+            <div className="space-y-4">
+              <BudgetOverview
+                monthlyIncome={data.monthlyIncome}
+                savingTargetAmount={data.savingTargetAmount}
+                spendableAmount={data.spendableAmount}
+                totalExpenses={data.totalExpenses}
+                remaining={data.remaining}
+                usageRate={data.usageRate}
+                isOverBudget={data.isOverBudget}
+              />
+              <DailyTrendChart
+                data={data.dailyTrend}
+                idealDailyBudget={data.idealDailyBudget}
+                spendableAmount={data.spendableAmount}
+                daysInMonth={data.daysInMonth}
+              />
+            </div>
+
+            {/* 右カラム: チャート + 取引 */}
+            <div className="space-y-4">
+              <CategoryChart data={data.byCategory} />
+              <CategoryBarChart data={data.byCategory} />
+              <RecentTransactions transactions={data.recentTransactions} />
+            </div>
+          </div>
+        </>
       ) : null}
     </div>
   );

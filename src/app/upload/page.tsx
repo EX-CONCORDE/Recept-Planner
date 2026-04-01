@@ -121,7 +121,7 @@ export default function UploadPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-w-2xl">
       <h1 className="text-xl font-bold">レシート撮影</h1>
 
       {step === "choose" && (
@@ -183,13 +183,15 @@ export default function UploadPage() {
       )}
 
       {step === "result" && extraction && receiptId && (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {previewUrl && (
-            <img
-              src={previewUrl}
-              alt="レシート"
-              className="w-full rounded-lg max-h-48 object-cover"
-            />
+            <div>
+              <img
+                src={previewUrl}
+                alt="レシート"
+                className="w-full rounded-lg object-contain max-h-[70vh] sticky top-4"
+              />
+            </div>
           )}
           <ExtractResult
             receiptId={receiptId}

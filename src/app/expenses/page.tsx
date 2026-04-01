@@ -102,102 +102,91 @@ export default function ExpensesPage() {
 
   const filteredCategories = categories.filter((c) => c.type === txType);
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">支出・収入</h1>
-        <Button
-          size="sm"
-          variant={showForm ? "outline" : "default"}
-          onClick={() => setShowForm(!showForm)}
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          {showForm ? "閉じる" : "追加"}
-        </Button>
-      </div>
+  const transactionForm = (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">新規登録</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={txType === "expense" ? "default" : "outline"}
+              onClick={() => setTxType("expense")}
+            >
+              支出
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={txType === "income" ? "default" : "outline"}
+              onClick={() => setTxType("income")}
+            >
+              収入
+            </Button>
+          </div>
+          <div className="space-y-1">
+            <Label>金額</Label>
+            <Input
+              type="number"
+              placeholder="0"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>日付</Label>
+            <Input
+              type="date"
+              value={txDate}
+              onChange={(e) => setTxDate(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>カテゴリ</Label>
+            <select
+              className="w-full rounded-md border px-3 py-2 text-sm"
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+            >
+              <option value="">未分類</option>
+              {filteredCategories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <Label>店名・請求元</Label>
+            <Input
+              placeholder="例: コンビニ"
+              value={merchantName}
+              onChange={(e) => setMerchantName(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>メモ</Label>
+            <Input
+              placeholder="任意"
+              value={memo}
+              onChange={(e) => setMemo(e.target.value)}
+            />
+          </div>
+          <Button type="submit" className="w-full">
+            登録
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
 
-      {showForm && (
-        <Card>
-          <CardContent className="pt-4">
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={txType === "expense" ? "default" : "outline"}
-                  onClick={() => setTxType("expense")}
-                >
-                  支出
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={txType === "income" ? "default" : "outline"}
-                  onClick={() => setTxType("income")}
-                >
-                  収入
-                </Button>
-              </div>
-              <div className="space-y-1">
-                <Label>金額</Label>
-                <Input
-                  type="number"
-                  placeholder="0"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>日付</Label>
-                <Input
-                  type="date"
-                  value={txDate}
-                  onChange={(e) => setTxDate(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>カテゴリ</Label>
-                <select
-                  className="w-full rounded-md border px-3 py-2 text-sm"
-                  value={categoryId}
-                  onChange={(e) => setCategoryId(e.target.value)}
-                >
-                  <option value="">未分類</option>
-                  {filteredCategories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1">
-                <Label>店名・請求元</Label>
-                <Input
-                  placeholder="例: コンビニ"
-                  value={merchantName}
-                  onChange={(e) => setMerchantName(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>メモ</Label>
-                <Input
-                  placeholder="任意"
-                  value={memo}
-                  onChange={(e) => setMemo(e.target.value)}
-                />
-              </div>
-              <Button type="submit" className="w-full">
-                登録
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
-      <MonthSelector yearMonth={yearMonth} onChange={setYearMonth} />
-
+  const transactionList = (
+    <>
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -248,6 +237,35 @@ export default function ExpensesPage() {
           ))}
         </div>
       )}
+    </>
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold">支出・収入</h1>
+        {/* スマホのみ追加ボタン表示 */}
+        <Button
+          size="sm"
+          variant={showForm ? "outline" : "default"}
+          onClick={() => setShowForm(!showForm)}
+          className="md:hidden"
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          {showForm ? "閉じる" : "追加"}
+        </Button>
+      </div>
+
+      <MonthSelector yearMonth={yearMonth} onChange={setYearMonth} />
+
+      {/* PC: 左フォーム + 右リスト / スマホ: 縦並び */}
+      <div className="grid grid-cols-1 md:grid-cols-[320px_1fr] gap-4">
+        {/* PC: フォーム常時表示 / スマホ: トグル */}
+        <div className={`${showForm ? "block" : "hidden"} md:block`}>
+          {transactionForm}
+        </div>
+        <div>{transactionList}</div>
+      </div>
     </div>
   );
 }
