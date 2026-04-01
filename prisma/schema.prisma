@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Category {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @db.VarChar(100)
+  type      String   @default("expense") @db.VarChar(20) // expense | income
+  isDefault Boolean  @default(false) @map("is_default")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  transactions Transaction[]
+
+  @@map("categories")
+}
+
+model Transaction {
+  id           Int       @id @default(autoincrement())
+  txType       String    @map("tx_type") @db.VarChar(20) // expense | income
+  amount       Int       // 日本円（整数）
+  txDate       DateTime  @map("tx_date") @db.Date
+  categoryId   Int?      @map("category_id")
+  merchantName String?   @map("merchant_name") @db.VarChar(300)
+  memo         String?   @db.VarChar(500)
+  receiptId    Int?      @map("receipt_id")
+  source       String    @default("manual") @db.VarChar(20) // manual | ai
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  receipt  Receipt?  @relation(fields: [receiptId], references: [id], onDelete: SetNull)
+
+  @@index([txDate])
+  @@index([categoryId])
+  @@map("transactions")
+}
+
+model Receipt {
+  id           Int      @id @default(autoincrement())
+  filePath     String   @map("file_path") @db.VarChar(500)
+  ocrRawText   String?  @map("ocr_raw_text")
+  aiResultJson Json?    @map("ai_result_json")
+  status       String   @default("uploaded") @db.VarChar(20) // uploaded | processed | confirmed | failed
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  transactions Transaction[]
+
+  @@map("receipts")
+}
+
+model MonthlyPlan {
+  id                 Int      @id @default(autoincrement())
+  yearMonth          String   @unique @map("year_month") @db.VarChar(7) // YYYY-MM
+  monthlyIncome      Int      @default(0) @map("monthly_income")
+  savingTargetAmount Int      @default(0) @map("saving_target_amount")
+  savingTargetRate   Float?   @map("saving_target_rate")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("monthly_plans")
+}
