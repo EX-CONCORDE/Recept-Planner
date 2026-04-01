@@ -99,6 +99,136 @@ npm run dev
 
 http://localhost:3000 でアクセス。
 
+## Ubuntu Server（Proxmox VM）でのセットアップ
+
+新しいサーバーに一からデプロイする手順です。
+
+### 1. サーバー準備（Ubuntu 24.04 Server）
+
+```bash
+# システム更新
+sudo apt update && sudo apt upgrade -y
+
+# Docker インストール
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker $USER
+# ログアウト→ログインして反映
+
+# （Dockerを使わない場合）Node.js 22 インストール
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# Git
+sudo apt install -y git
+```
+
+### 2. アプリのデプロイ
+
+```bash
+# クローン
+cd /opt
+sudo git clone https://github.com/EX-CONCORDE/Recept-Planner.git
+sudo chown -R $USER:$USER Recept-Planner
+cd Recept-Planner
+
+# 環境変数
+cp .env.example .env
+nano .env
+# → DATABASE_URL のパスワードを変更
+# → LMSTUDIO_BASE_URL をLMStudioサーバーのIPに設定
+# → LMSTUDIO_MODEL を使用するモデル名に設定
+```
+
+### 3A. Docker で起動（推奨）
+
+```bash
+export POSTGRES_PASSWORD=your_secure_password
+export LMSTUDIO_BASE_URL=http://192.168.x.x:1234
+
+# ビルド＆起動
+docker compose -f docker-compose.prod.yml up -d --build
+
+# 初回: DBマイグレーション＆シード
+docker compose -f docker-compose.prod.yml exec app npx prisma migrate deploy
+docker compose -f docker-compose.prod.yml exec app npx jiti prisma/seed.ts
+```
+
+### 3B. Node.js で直接起動
+
+```bash
+npm install
+npx prisma generate
+
+# PostgreSQLだけDockerで起動
+docker compose up -d
+
+# マイグレーション＆シード
+npx prisma migrate deploy
+npx jiti prisma/seed.ts
+
+# ビルド＆起動
+npm run build
+npm run start
+```
+
+### 4. ファイアウォール設定
+
+```bash
+sudo ufw enable
+sudo ufw allow ssh
+sudo ufw allow from 192.168.0.0/16 to any port 3000
+sudo ufw deny 3000
+sudo ufw status
+```
+
+### 5. systemd で自動起動（Docker不使用の場合）
+
+```bash
+sudo tee /etc/systemd/system/recept-planner.service << 'EOF'
+[Unit]
+Description=Recept Planner
+After=network.target docker.service
+
+[Service]
+Type=simple
+User=$USER
+WorkingDirectory=/opt/Recept-Planner
+ExecStart=/usr/bin/npm run start
+Restart=on-failure
+RestartSec=10
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl enable recept-planner
+sudo systemctl start recept-planner
+sudo systemctl status recept-planner
+```
+
+### 6. 動作確認
+
+ブラウザで `http://<サーバーIP>:3000` にアクセス。
+
+### アーキテクチャ図
+
+```
+[スマホ/PC ブラウザ]
+        │
+        │ HTTP (port 3000)
+        ▼
+┌─── Proxmox VM (Ubuntu 24.04) ───┐
+│                                   │
+│   [Next.js App]  ←→  [PostgreSQL] │
+│        │                          │
+│        │ HTTP (内部ネットワーク)     │
+│        ▼                          │
+│   [LMStudio VM]                   │
+│   (Vision LLM)                    │
+└───────────────────────────────────┘
+```
+
 ## 推奨LLMモデル（LMStudio用）
 
 | モデル | VRAM目安 | 日本語OCR | 推奨度 |
