@@ -6,6 +6,8 @@ import { formatYen } from "@/lib/format";
 interface TaxBreakdownData {
   grossMonthly: number;
   standardMonthly: number;
+  prefecture: string;
+  residentTaxSurcharge: number;
   healthInsurance: number;
   pension: number;
   employmentInsurance: number;
@@ -28,7 +30,14 @@ export function TaxBreakdownCard({ data }: TaxBreakdownProps) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg">税金・社会保険料の内訳</CardTitle>
+        <CardTitle className="text-lg flex items-center justify-between">
+          <span>税金・社会保険料の内訳</span>
+          {data.prefecture && data.prefecture !== "全国平均" && (
+            <span className="text-xs font-normal text-muted-foreground bg-secondary rounded px-2 py-0.5">
+              {data.prefecture}
+            </span>
+          )}
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         {/* 社会保険料 */}
@@ -60,7 +69,15 @@ export function TaxBreakdownCard({ data }: TaxBreakdownProps) {
           </p>
           <div className="space-y-0.5 ml-2">
             <Row label="所得税" value={data.incomeTax} />
-            <Row label="住民税" value={data.residentTax} note="前年所得ベース" />
+            <Row
+              label="住民税"
+              value={data.residentTax}
+              note={
+                data.residentTaxSurcharge > 0
+                  ? `${data.prefecture} 超過課税+${data.residentTaxSurcharge}円/年含む`
+                  : "前年所得ベース"
+              }
+            />
             <div className="border-t pt-0.5 font-semibold flex justify-between">
               <span>小計</span>
               <span className="text-red-600">-{formatYen(data.taxTotal)}</span>

@@ -13,6 +13,8 @@ import { Calculator } from "lucide-react";
 interface TaxBreakdown {
   grossMonthly: number;
   standardMonthly: number;
+  prefecture: string;
+  residentTaxSurcharge: number;
   healthInsurance: number;
   pension: number;
   employmentInsurance: number;

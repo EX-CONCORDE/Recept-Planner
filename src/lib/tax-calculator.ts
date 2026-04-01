@@ -122,11 +122,48 @@ const INCOME_TAX_BRACKETS: Array<{
 /** 復興特別所得税率 (2037年まで) */
 const RECONSTRUCTION_TAX_RATE = 0.021;
 
-/** 住民税所得割率 */
-const RESIDENT_TAX_INCOME_RATE = 0.1;
+/** 住民税所得割 標準税率 */
+const RESIDENT_TAX_INCOME_RATE_BASE = 0.1;
 
-/** 住民税均等割 + 森林環境税 (年額) */
-const RESIDENT_TAX_FLAT = 6_000;
+/** 住民税均等割 標準額（道府県1,000 + 市町村3,000）+ 森林環境税（国税）1,000 */
+const RESIDENT_TAX_FLAT_BASE = 5_000;
+
+/**
+ * 都道府県別 住民税均等割の超過課税（年額）
+ * 各都道府県独自の森林環境税・環境税等
+ */
+const RESIDENT_TAX_SURCHARGE: Record<string, number> = {
+  北海道: 0, 青森: 0, 岩手: 1000, 宮城: 1200, 秋田: 800,
+  山形: 1000, 福島: 1000, 茨城: 1000, 栃木: 700, 群馬: 700,
+  埼玉: 0, 千葉: 0, 東京: 0, 神奈川: 300, 新潟: 0,
+  富山: 500, 石川: 500, 福井: 0, 山梨: 500, 長野: 500,
+  岐阜: 1000, 静岡: 400, 愛知: 500, 三重: 1000, 滋賀: 800,
+  京都: 600, 大阪: 300, 兵庫: 800, 奈良: 500, 和歌山: 500,
+  鳥取: 500, 島根: 500, 岡山: 500, 広島: 500, 山口: 500,
+  徳島: 0, 香川: 0, 愛媛: 700, 高知: 500, 福岡: 500,
+  佐賀: 500, 長崎: 500, 熊本: 500, 大分: 500, 宮崎: 500,
+  鹿児島: 500, 沖縄: 0, 全国平均: 0,
+};
+
+/**
+ * 都道府県別 住民税所得割の超過課税率
+ * 神奈川県のみ水源環境保全税 +0.025%
+ */
+const RESIDENT_TAX_INCOME_SURCHARGE: Record<string, number> = {
+  神奈川: 0.00025,
+};
+
+/** 都道府県別の均等割合計（標準 + 森林環境税 + 超過課税）を取得 */
+function getResidentTaxFlat(prefecture: string): number {
+  const surcharge = RESIDENT_TAX_SURCHARGE[prefecture] ?? 0;
+  return RESIDENT_TAX_FLAT_BASE + 1_000 + surcharge; // 標準5,000 + 森林環境税1,000 + 超過課税
+}
+
+/** 都道府県別の所得割率を取得 */
+function getResidentTaxIncomeRate(prefecture: string): number {
+  const surcharge = RESIDENT_TAX_INCOME_SURCHARGE[prefecture] ?? 0;
+  return RESIDENT_TAX_INCOME_RATE_BASE + surcharge;
+}
 
 // ============================================================
 // 標準報酬月額テーブル（主要等級のみ、厚生年金の範囲）
@@ -196,6 +233,10 @@ export interface TaxBreakdown {
   grossAnnual: number;
   /** 標準報酬月額 */
   standardMonthly: number;
+  /** 都道府県 */
+  prefecture: string;
+  /** 住民税均等割の超過課税（年額） */
+  residentTaxSurcharge: number;
 
   /** --- 社会保険料（月額・本人負担） --- */
   healthInsurance: number;
@@ -285,7 +326,7 @@ export function calculateTax(config: TaxConfig): TaxBreakdown {
   incomeTaxAnnual = Math.max(incomeTaxAnnual, 0);
   const incomeTax = Math.round(incomeTaxAnnual / 12);
 
-  // --- 住民税（年額→月額） ---
+  // --- 住民税（年額→月額）--- 都道府県別の超過課税を適用
   const residentTaxableIncome = Math.max(
     Math.floor(
       (salaryIncome - RESIDENT_TAX_BASIC_DEDUCTION - socialInsuranceAnnual) /
@@ -293,13 +334,15 @@ export function calculateTax(config: TaxConfig): TaxBreakdown {
     ) * 1000,
     0,
   );
+  const residentTaxRate = getResidentTaxIncomeRate(prefecture);
   const residentIncomeRate = Math.floor(
-    residentTaxableIncome * RESIDENT_TAX_INCOME_RATE,
+    residentTaxableIncome * residentTaxRate,
   );
   // 調整控除（基礎控除の差額5万円×5%=2,500円を概算適用）
   const adjustmentDeduction = 2500;
+  const residentTaxFlat = getResidentTaxFlat(prefecture);
   const residentTaxAnnual = Math.max(
-    residentIncomeRate - adjustmentDeduction + RESIDENT_TAX_FLAT,
+    residentIncomeRate - adjustmentDeduction + residentTaxFlat,
     0,
   );
   const residentTax = Math.round(residentTaxAnnual / 12);
@@ -321,6 +364,8 @@ export function calculateTax(config: TaxConfig): TaxBreakdown {
     grossMonthly,
     grossAnnual,
     standardMonthly,
+    prefecture,
+    residentTaxSurcharge: RESIDENT_TAX_SURCHARGE[prefecture] ?? 0,
     healthInsurance,
     pension,
     employmentInsurance,
@@ -347,8 +392,9 @@ export function calculateTax(config: TaxConfig): TaxBreakdown {
 export function predictResidentTax(config: {
   estimatedAnnualIncome: number;
   estimatedAnnualSocialInsurance: number;
+  prefecture?: string;
 }): { annual: number; monthly: number } {
-  const { estimatedAnnualIncome, estimatedAnnualSocialInsurance } = config;
+  const { estimatedAnnualIncome, estimatedAnnualSocialInsurance, prefecture = "全国平均" } = config;
   const salaryDeduction = calcSalaryDeduction(estimatedAnnualIncome);
   const salaryIncome = Math.max(estimatedAnnualIncome - salaryDeduction, 0);
   const taxableIncome = Math.max(
@@ -360,8 +406,10 @@ export function predictResidentTax(config: {
     ) * 1000,
     0,
   );
-  const incomeRate = Math.floor(taxableIncome * RESIDENT_TAX_INCOME_RATE);
-  const annual = Math.max(incomeRate - 2500 + RESIDENT_TAX_FLAT, 0);
+  const rate = getResidentTaxIncomeRate(prefecture);
+  const flat = getResidentTaxFlat(prefecture);
+  const incomeRate = Math.floor(taxableIncome * rate);
+  const annual = Math.max(incomeRate - 2500 + flat, 0);
   return { annual, monthly: Math.round(annual / 12) };
 }
 

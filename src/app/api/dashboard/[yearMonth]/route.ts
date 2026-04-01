@@ -110,6 +110,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
     nextYearResidentTaxPrediction = predictResidentTax({
       estimatedAnnualIncome: annualGross,
       estimatedAnnualSocialInsurance: breakdown.socialInsuranceAnnual,
+      prefecture: plan.prefecture ?? undefined,
     });
   }
 
