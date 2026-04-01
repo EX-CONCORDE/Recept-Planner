@@ -5,6 +5,7 @@ import { BudgetOverview } from "@/components/dashboard/budget-overview";
 import { CategoryChart } from "@/components/dashboard/category-chart";
 import { CategoryBarChart } from "@/components/dashboard/category-bar-chart";
 import { DailyTrendChart } from "@/components/dashboard/daily-trend-chart";
+import { TaxBreakdownCard } from "@/components/dashboard/tax-breakdown";
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { MonthSelector } from "@/components/layout/month-selector";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,6 +37,27 @@ interface DashboardData {
   }[];
   idealDailyBudget: number;
   daysInMonth: number;
+  grossIncome: number | null;
+  taxBreakdown: {
+    grossMonthly: number;
+    standardMonthly: number;
+    healthInsurance: number;
+    pension: number;
+    employmentInsurance: number;
+    nursingCare: number;
+    childcareSupport: number;
+    socialInsuranceTotal: number;
+    incomeTax: number;
+    residentTax: number;
+    taxTotal: number;
+    totalDeductions: number;
+    netMonthly: number;
+    netRate: number;
+  } | null;
+  nextYearResidentTaxPrediction: {
+    annual: number;
+    monthly: number;
+  } | null;
   recentTransactions: {
     id: number;
     txType: string;
@@ -123,8 +145,31 @@ export default function DashboardPage() {
               />
             </div>
 
-            {/* 右カラム: チャート + 取引 */}
+            {/* 右カラム: 税金 + チャート + 取引 */}
             <div className="space-y-4">
+              {data.taxBreakdown && (
+                <TaxBreakdownCard data={data.taxBreakdown} />
+              )}
+              {data.nextYearResidentTaxPrediction && (
+                <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+                  <CardContent className="py-3">
+                    <p className="text-xs text-muted-foreground mb-1">
+                      来年度の住民税予測（今年の収入ベース）
+                    </p>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-lg font-bold text-blue-700 dark:text-blue-300">
+                        月額 ¥{data.nextYearResidentTaxPrediction.monthly.toLocaleString()}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        (年額 ¥{data.nextYearResidentTaxPrediction.annual.toLocaleString()})
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      ※ 来年6月〜再来年5月の天引き額の概算です
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
               <CategoryChart data={data.byCategory} />
               <CategoryBarChart data={data.byCategory} />
               <RecentTransactions transactions={data.recentTransactions} />

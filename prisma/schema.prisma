@@ -56,7 +56,12 @@ model Receipt {
 model MonthlyPlan {
   id                 Int      @id @default(autoincrement())
   yearMonth          String   @unique @map("year_month") @db.VarChar(7) // YYYY-MM
-  monthlyIncome      Int      @default(0) @map("monthly_income")
+  monthlyIncome      Int      @default(0) @map("monthly_income") // 手取り（自動計算 or 手動入力）
+  grossIncome        Int?     @map("gross_income") // 額面月収（税計算用）
+  age                Int?     // 年齢（介護保険判定用）
+  prefecture         String?  @db.VarChar(10) // 都道府県（健保料率用）
+  bonusMonths        Float?   @map("bonus_months") // 賞与月数
+  autoCalcTax        Boolean  @default(false) @map("auto_calc_tax") // 税金自動計算フラグ
   savingTargetAmount Int      @default(0) @map("saving_target_amount")
   savingTargetRate   Float?   @map("saving_target_rate")
   createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz

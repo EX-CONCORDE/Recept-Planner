@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { success, error } from "@/lib/api-response";
 import { yearMonthSchema } from "@/lib/validations/monthly-plan";
+import { calculateTax, predictResidentTax } from "@/lib/tax-calculator";
 
 type Params = { params: Promise<{ yearMonth: string }> };
 
@@ -86,9 +87,36 @@ export async function GET(_request: NextRequest, { params }: Params) {
   const idealDailyBudget =
     spendableAmount > 0 ? spendableAmount / daysInMonth : 0;
 
+  // 税金内訳（額面設定がある場合）
+  let taxBreakdown = null;
+  if (plan?.autoCalcTax && plan?.grossIncome) {
+    taxBreakdown = calculateTax({
+      grossMonthly: plan.grossIncome,
+      prefecture: plan.prefecture ?? undefined,
+      age: plan.age ?? undefined,
+      bonusMonths: plan.bonusMonths ?? undefined,
+    });
+  }
+
+  // 住民税予測（今年の累計データから来年を概算）
+  let nextYearResidentTaxPrediction = null;
+  if (plan?.grossIncome) {
+    const annualGross = plan.grossIncome * 12;
+    const breakdown = calculateTax({
+      grossMonthly: plan.grossIncome,
+      prefecture: plan.prefecture ?? undefined,
+      age: plan.age ?? undefined,
+    });
+    nextYearResidentTaxPrediction = predictResidentTax({
+      estimatedAnnualIncome: annualGross,
+      estimatedAnnualSocialInsurance: breakdown.socialInsuranceAnnual,
+    });
+  }
+
   return success({
     yearMonth,
     monthlyIncome,
+    grossIncome: plan?.grossIncome ?? null,
     savingTargetAmount,
     spendableAmount,
     totalExpenses,
@@ -101,5 +129,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
     idealDailyBudget,
     daysInMonth,
     recentTransactions: transactions.slice(0, 10),
+    taxBreakdown,
+    nextYearResidentTaxPrediction,
   });
 }
