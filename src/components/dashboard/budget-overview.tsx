@@ -2,13 +2,14 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatYen } from "@/lib/format";
-import { AlertTriangle, PiggyBank, TrendingDown } from "lucide-react";
+import { AlertTriangle, PiggyBank, TrendingDown, Wallet } from "lucide-react";
 
 interface BudgetOverviewProps {
   monthlyIncome: number;
   savingTargetAmount: number;
   spendableAmount: number;
   totalExpenses: number;
+  buffer: number;
   remaining: number;
   usageRate: number;
   isOverBudget: boolean;
@@ -19,6 +20,7 @@ export function BudgetOverview({
   savingTargetAmount,
   spendableAmount,
   totalExpenses,
+  buffer,
   remaining,
   usageRate,
   isOverBudget,
@@ -65,6 +67,17 @@ export function BudgetOverview({
                 {formatYen(spendableAmount)}
               </span>
             </div>
+            {buffer > 0 && (
+              <div className="flex justify-between text-blue-600">
+                <span className="flex items-center gap-1">
+                  <Wallet className="h-3.5 w-3.5" />
+                  バッファー（日当等）
+                </span>
+                <span className="font-semibold">
+                  +{formatYen(buffer)}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* 使用率バー */}
@@ -103,6 +116,11 @@ export function BudgetOverview({
           >
             <p className="text-sm font-medium">
               {isOverBudget ? "予算超過！" : "残り使える金額"}
+              {buffer > 0 && !isOverBudget && (
+                <span className="text-xs font-normal text-muted-foreground ml-1">
+                  (バッファー込み)
+                </span>
+              )}
             </p>
             <p className="text-2xl font-bold">
               {isOverBudget ? "-" : ""}

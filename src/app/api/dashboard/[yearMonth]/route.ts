@@ -36,7 +36,8 @@ export async function GET(_request: NextRequest, { params }: Params) {
     .reduce((sum, t) => sum + t.amount, 0);
 
   const spendableAmount = monthlyIncome - savingTargetAmount;
-  const remaining = spendableAmount - totalExpenses;
+  const buffer = totalIncome; // 日当・副収入などのバッファー
+  const remaining = spendableAmount + buffer - totalExpenses;
   const usageRate =
     spendableAmount > 0
       ? Math.round((totalExpenses / spendableAmount) * 1000) / 10
@@ -122,6 +123,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
     spendableAmount,
     totalExpenses,
     totalIncome,
+    buffer,
     remaining,
     usageRate,
     isOverBudget: remaining < 0,
