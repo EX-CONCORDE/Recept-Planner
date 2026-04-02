@@ -18,10 +18,13 @@ export async function GET() {
   });
 
   // 月ごとの貯金実績
+  // 貯金 = 貯金目標額 + 残り使える金額
+  //       = savingTargetAmount + (spendableAmount + buffer - expenses)
+  //       = savingTargetAmount + ((monthlyIncome - savingTargetAmount) + buffer - expenses)
   const monthlyHistory: Array<{
     yearMonth: string;
-    income: number;
-    expenses: number;
+    savingTarget: number;
+    remaining: number;
     saved: number;
     cumulativeSaved: number;
   }> = [];
@@ -40,17 +43,21 @@ export async function GET() {
     const expenses = monthTx
       .filter((t) => t.txType === "expense")
       .reduce((s, t) => s + t.amount, 0);
-    const income = monthTx
+    const buffer = monthTx
       .filter((t) => t.txType === "income")
       .reduce((s, t) => s + t.amount, 0);
 
-    const saved = plan.monthlyIncome + income - expenses;
+    const savingTarget = plan.savingTargetAmount;
+    const spendable = plan.monthlyIncome - savingTarget;
+    const remaining = spendable + buffer - expenses;
+    const saved = savingTarget + remaining; // 貯金目標 + 残額
+
     cumulativeSaved += saved;
 
     monthlyHistory.push({
       yearMonth: plan.yearMonth,
-      income: plan.monthlyIncome + income,
-      expenses,
+      savingTarget,
+      remaining,
       saved,
       cumulativeSaved,
     });

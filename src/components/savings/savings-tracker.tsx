@@ -20,8 +20,8 @@ interface SavingsGoal {
 
 interface MonthlyHistory {
   yearMonth: string;
-  income: number;
-  expenses: number;
+  savingTarget: number;
+  remaining: number;
   saved: number;
   cumulativeSaved: number;
 }
@@ -123,21 +123,28 @@ export function SavingsTracker() {
                 .slice(-6)
                 .reverse()
                 .map((m) => (
-                  <div
-                    key={m.yearMonth}
-                    className="flex justify-between text-xs"
-                  >
-                    <span>{m.yearMonth.replace("-", "年")}月</span>
-                    <span
-                      className={
-                        m.saved >= 0
-                          ? "text-green-600 font-medium"
-                          : "text-red-600 font-medium"
-                      }
-                    >
-                      {m.saved >= 0 ? "+" : ""}
-                      {formatYen(m.saved)}
-                    </span>
+                  <div key={m.yearMonth} className="text-xs">
+                    <div className="flex justify-between">
+                      <span>{m.yearMonth.replace("-", "年")}月</span>
+                      <span
+                        className={
+                          m.saved >= 0
+                            ? "text-green-600 font-semibold"
+                            : "text-red-600 font-semibold"
+                        }
+                      >
+                        {m.saved >= 0 ? "+" : ""}
+                        {formatYen(m.saved)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-muted-foreground text-[10px] ml-2">
+                      <span>
+                        目標 {formatYen(m.savingTarget)}
+                        {m.remaining >= 0
+                          ? ` + 残額 ${formatYen(m.remaining)}`
+                          : ` - 超過 ${formatYen(Math.abs(m.remaining))}`}
+                      </span>
+                    </div>
                   </div>
                 ))}
             </div>
