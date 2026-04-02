@@ -4,16 +4,18 @@ import { success, error } from "@/lib/api-response";
 import { resizeAndEncode } from "@/lib/image-utils";
 import { extractReceiptData } from "@/lib/lmstudio";
 import { parseAiResponse } from "@/lib/receipt-parser";
+import { requireAuth } from "@/lib/session";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function POST(_request: NextRequest, { params }: Params) {
+  const { userId } = await requireAuth();
   const { id } = await params;
   const receiptId = parseInt(id, 10);
   if (isNaN(receiptId)) return error("無効なIDです");
 
-  const receipt = await prisma.receipt.findUnique({
-    where: { id: receiptId },
+  const receipt = await prisma.receipt.findFirst({
+    where: { id: receiptId, userId },
   });
   if (!receipt) return error("レシートが見つかりません", 404);
 

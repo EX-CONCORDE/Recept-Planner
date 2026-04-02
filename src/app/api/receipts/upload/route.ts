@@ -4,10 +4,12 @@ import { join } from "node:path";
 import { prisma } from "@/lib/prisma";
 import { success, error } from "@/lib/api-response";
 import { isAllowedImageType } from "@/lib/image-utils";
+import { requireAuth } from "@/lib/session";
 
 const STORAGE_PATH = process.env.RECEIPT_STORAGE_PATH || "./data/receipts";
 
 export async function POST(request: NextRequest) {
+  const { userId } = await requireAuth();
   const formData = await request.formData();
   const file = formData.get("image") as File | null;
 
@@ -37,6 +39,7 @@ export async function POST(request: NextRequest) {
     data: {
       filePath,
       status: "uploaded",
+      userId,
     },
   });
 

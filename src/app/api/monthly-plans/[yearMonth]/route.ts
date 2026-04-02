@@ -6,16 +6,18 @@ import {
   upsertMonthlyPlanSchema,
 } from "@/lib/validations/monthly-plan";
 import { calculateTax } from "@/lib/tax-calculator";
+import { requireAuth } from "@/lib/session";
 
 type Params = { params: Promise<{ yearMonth: string }> };
 
 export async function GET(_request: NextRequest, { params }: Params) {
+  const { userId } = await requireAuth();
   const { yearMonth } = await params;
   const parsed = yearMonthSchema.safeParse(yearMonth);
   if (!parsed.success) return error("YYYY-MM形式で指定してください");
 
   const plan = await prisma.monthlyPlan.findUnique({
-    where: { yearMonth },
+    where: { yearMonth_userId: { yearMonth, userId } },
   });
 
   if (!plan) {
@@ -33,7 +35,6 @@ export async function GET(_request: NextRequest, { params }: Params) {
     });
   }
 
-  // 税計算内訳を付与
   let taxBreakdown = null;
   if (plan.autoCalcTax && plan.grossIncome) {
     taxBreakdown = calculateTax({
@@ -48,6 +49,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
 }
 
 export async function PUT(request: NextRequest, { params }: Params) {
+  const { userId } = await requireAuth();
   const { yearMonth } = await params;
   const body = await request.json();
   const parsed = upsertMonthlyPlanSchema.safeParse({
@@ -59,7 +61,6 @@ export async function PUT(request: NextRequest, { params }: Params) {
     return error(parsed.error.issues[0].message);
   }
 
-  // 税金自動計算の場合、手取りを自動設定
   let { monthlyIncome } = parsed.data;
   let taxBreakdown = null;
 
@@ -74,7 +75,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
   }
 
   const plan = await prisma.monthlyPlan.upsert({
-    where: { yearMonth },
+    where: { yearMonth_userId: { yearMonth, userId } },
     update: {
       monthlyIncome,
       grossIncome: parsed.data.grossIncome,
@@ -95,6 +96,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
       autoCalcTax: parsed.data.autoCalcTax,
       savingTargetAmount: parsed.data.savingTargetAmount,
       savingTargetRate: parsed.data.savingTargetRate,
+      userId,
     },
   });
 

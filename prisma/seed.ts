@@ -1,5 +1,6 @@
 import "dotenv/config";
 import pg from "pg";
+import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client.js";
 
@@ -29,14 +30,38 @@ const defaultCategories = [
 ];
 
 async function main() {
+  // 初期管理者ユーザーを upsert
+  const adminEmail = process.env.ADMIN_EMAIL ?? "admin@local";
+  const adminName = process.env.ADMIN_NAME ?? "管理者";
+  const adminPassword = process.env.ADMIN_PASSWORD;
+
+  const passwordHash = adminPassword
+    ? await bcrypt.hash(adminPassword, 10)
+    : await bcrypt.hash("admin", 10);
+
+  const admin = await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: {},
+    create: {
+      name: adminName,
+      email: adminEmail,
+      passwordHash,
+      role: "admin",
+    },
+  });
+
+  // デフォルトカテゴリを管理者に紐付け
   for (const cat of defaultCategories) {
     await prisma.category.upsert({
-      where: { name: cat.name },
+      where: {
+        name_userId: { name: cat.name, userId: admin.id },
+      },
       update: {},
-      create: cat,
+      create: { ...cat, userId: admin.id },
     });
   }
-  console.log("Seed data inserted successfully");
+
+  console.log(`Seed complete: admin user (id=${admin.id}, email=${admin.email})`);
 }
 
 main()

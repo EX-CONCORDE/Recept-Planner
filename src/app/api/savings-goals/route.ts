@@ -2,25 +2,26 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { success, error } from "@/lib/api-response";
 import { createSavingsGoalSchema } from "@/lib/validations/savings-goal";
+import { requireAuth } from "@/lib/session";
 
 export async function GET() {
+  const { userId } = await requireAuth();
+
   const goals = await prisma.savingsGoal.findMany({
+    where: { userId },
     orderBy: { createdAt: "desc" },
   });
 
-  // 月別の貯金実績を計算（各月の monthlyIncome - totalExpenses の累計）
   const plans = await prisma.monthlyPlan.findMany({
+    where: { userId },
     orderBy: { yearMonth: "asc" },
   });
 
   const transactions = await prisma.transaction.findMany({
+    where: { userId },
     select: { txType: true, amount: true, txDate: true },
   });
 
-  // 月ごとの貯金実績
-  // 貯金 = 貯金目標額 + 残り使える金額
-  //       = savingTargetAmount + (spendableAmount + buffer - expenses)
-  //       = savingTargetAmount + ((monthlyIncome - savingTargetAmount) + buffer - expenses)
   const monthlyHistory: Array<{
     yearMonth: string;
     savingTarget: number;
@@ -50,7 +51,7 @@ export async function GET() {
     const savingTarget = plan.savingTargetAmount;
     const spendable = plan.monthlyIncome - savingTarget;
     const remaining = spendable + buffer - expenses;
-    const saved = savingTarget + remaining; // 貯金目標 + 残額
+    const saved = savingTarget + remaining;
 
     cumulativeSaved += saved;
 
@@ -67,12 +68,15 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const { userId } = await requireAuth();
   const body = await request.json();
   const parsed = createSavingsGoalSchema.safeParse(body);
   if (!parsed.success) {
     return error(parsed.error.issues[0].message);
   }
 
-  const goal = await prisma.savingsGoal.create({ data: parsed.data });
+  const goal = await prisma.savingsGoal.create({
+    data: { ...parsed.data, userId },
+  });
   return success(goal, 201);
 }

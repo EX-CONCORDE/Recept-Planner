@@ -5,8 +5,10 @@ import {
   createTransactionSchema,
   transactionQuerySchema,
 } from "@/lib/validations/transaction";
+import { requireAuth } from "@/lib/session";
 
 export async function GET(request: NextRequest) {
+  const { userId } = await requireAuth();
   const searchParams = request.nextUrl.searchParams;
   const query = transactionQuerySchema.safeParse({
     yearMonth: searchParams.get("yearMonth") ?? undefined,
@@ -17,7 +19,7 @@ export async function GET(request: NextRequest) {
     return error(query.error.issues[0].message);
   }
 
-  const where: Record<string, unknown> = {};
+  const where: Record<string, unknown> = { userId };
 
   if (query.data.yearMonth) {
     const [year, month] = query.data.yearMonth.split("-").map(Number);
@@ -39,6 +41,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const { userId } = await requireAuth();
   const body = await request.json();
   const parsed = createTransactionSchema.safeParse(body);
 
@@ -50,6 +53,7 @@ export async function POST(request: NextRequest) {
     data: {
       ...parsed.data,
       txDate: new Date(parsed.data.txDate),
+      userId,
     },
     include: { category: true },
   });

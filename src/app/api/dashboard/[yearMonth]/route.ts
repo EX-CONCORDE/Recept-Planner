@@ -3,10 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { success, error } from "@/lib/api-response";
 import { yearMonthSchema } from "@/lib/validations/monthly-plan";
 import { calculateTax, predictResidentTax } from "@/lib/tax-calculator";
+import { requireAuth } from "@/lib/session";
 
 type Params = { params: Promise<{ yearMonth: string }> };
 
 export async function GET(_request: NextRequest, { params }: Params) {
+  const { userId } = await requireAuth();
   const { yearMonth } = await params;
   const parsed = yearMonthSchema.safeParse(yearMonth);
   if (!parsed.success) return error("YYYY-MM形式で指定してください");
@@ -17,9 +19,11 @@ export async function GET(_request: NextRequest, { params }: Params) {
   const daysInMonth = new Date(year, month, 0).getDate();
 
   const [plan, transactions] = await Promise.all([
-    prisma.monthlyPlan.findUnique({ where: { yearMonth } }),
+    prisma.monthlyPlan.findUnique({
+      where: { yearMonth_userId: { yearMonth, userId } },
+    }),
     prisma.transaction.findMany({
-      where: { txDate: { gte: start, lt: end } },
+      where: { userId, txDate: { gte: start, lt: end } },
       include: { category: true },
     }),
   ]);
@@ -36,7 +40,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
     .reduce((sum, t) => sum + t.amount, 0);
 
   const spendableAmount = monthlyIncome - savingTargetAmount;
-  const buffer = totalIncome; // 日当・副収入などのバッファー
+  const buffer = totalIncome;
   const remaining = spendableAmount + buffer - totalExpenses;
   const usageRate =
     spendableAmount > 0
@@ -81,14 +85,13 @@ export async function GET(_request: NextRequest, { params }: Params) {
       ),
   ).sort((a, b) => b.total - a.total);
 
-  // 日別支出集計（折れ線グラフ用）
+  // 日別支出集計
   const dailyExpenseMap: Record<number, number> = {};
   for (const t of transactions.filter((t) => t.txType === "expense")) {
     const day = new Date(t.txDate).getDate();
     dailyExpenseMap[day] = (dailyExpenseMap[day] ?? 0) + t.amount;
   }
 
-  // 日別データ（累積も計算）
   const dailyTrend: Array<{
     day: number;
     date: string;
@@ -103,11 +106,10 @@ export async function GET(_request: NextRequest, { params }: Params) {
     dailyTrend.push({ day: d, date: dateStr, daily, cumulative });
   }
 
-  // 理想ペースライン（使用可能額を日割り）
   const idealDailyBudget =
     spendableAmount > 0 ? spendableAmount / daysInMonth : 0;
 
-  // 税金内訳（額面設定がある場合）
+  // 税金内訳
   let taxBreakdown = null;
   if (plan?.autoCalcTax && plan?.grossIncome) {
     taxBreakdown = calculateTax({
@@ -118,7 +120,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
     });
   }
 
-  // 住民税予測（今年の累計データから来年を概算）
+  // 住民税予測
   let nextYearResidentTaxPrediction = null;
   if (plan?.grossIncome) {
     const annualGross = plan.grossIncome * 12;

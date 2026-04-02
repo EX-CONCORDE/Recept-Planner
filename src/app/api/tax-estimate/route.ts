@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { success, error } from "@/lib/api-response";
 import { calculateTax, predictResidentTax, PREFECTURES } from "@/lib/tax-calculator";
 import { z } from "zod/v4";
+import { requireAuth } from "@/lib/session";
 
 const taxEstimateSchema = z.object({
   grossMonthly: z.number().int().min(0),
@@ -11,6 +12,7 @@ const taxEstimateSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  await requireAuth();
   const body = await request.json();
   const parsed = taxEstimateSchema.safeParse(body);
   if (!parsed.success) {
@@ -22,5 +24,6 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
+  await requireAuth();
   return success({ prefectures: PREFECTURES });
 }

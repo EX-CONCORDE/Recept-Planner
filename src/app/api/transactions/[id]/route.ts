@@ -2,10 +2,12 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { success, error } from "@/lib/api-response";
 import { updateTransactionSchema } from "@/lib/validations/transaction";
+import { requireAuth } from "@/lib/session";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: NextRequest, { params }: Params) {
+  const { userId } = await requireAuth();
   const { id } = await params;
   const txId = parseInt(id, 10);
   if (isNaN(txId)) return error("無効なIDです");
@@ -22,7 +24,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   }
 
   const transaction = await prisma.transaction.update({
-    where: { id: txId },
+    where: { id: txId, userId },
     data,
     include: { category: true },
   });
@@ -30,10 +32,11 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 }
 
 export async function DELETE(_request: NextRequest, { params }: Params) {
+  const { userId } = await requireAuth();
   const { id } = await params;
   const txId = parseInt(id, 10);
   if (isNaN(txId)) return error("無効なIDです");
 
-  await prisma.transaction.delete({ where: { id: txId } });
+  await prisma.transaction.delete({ where: { id: txId, userId } });
   return success({ deleted: true });
 }
