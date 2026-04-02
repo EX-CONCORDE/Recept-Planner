@@ -69,3 +69,16 @@ model MonthlyPlan {
 
   @@map("monthly_plans")
 }
+
+model SavingsGoal {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(200) // 目標名（例: 旅行資金、緊急資金）
+  targetAmount Int     @map("target_amount") // 目標額
+  currentAmount Int    @default(0) @map("current_amount") // 手動で調整可能な現在額
+  deadline    String?  @db.VarChar(7) // 達成期限 YYYY-MM（任意）
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("savings_goals")
+}

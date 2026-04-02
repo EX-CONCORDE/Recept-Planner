@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { SavingsSidebar } from "@/components/savings/savings-sidebar";
 import {
   LayoutDashboard,
   Receipt,
@@ -46,6 +47,7 @@ export function SidebarNav() {
           );
         })}
       </nav>
+      <SavingsSidebar />
     </aside>
   );
 }

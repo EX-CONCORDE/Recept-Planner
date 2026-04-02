@@ -7,6 +7,7 @@ import { CategoryBarChart } from "@/components/dashboard/category-bar-chart";
 import { DailyTrendChart } from "@/components/dashboard/daily-trend-chart";
 import { TaxBreakdownCard } from "@/components/dashboard/tax-breakdown";
 import { IncomeExpenseSummary } from "@/components/dashboard/income-expense-summary";
+import { SavingsTracker } from "@/components/savings/savings-tracker";
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { MonthSelector } from "@/components/layout/month-selector";
 import { Card, CardContent } from "@/components/ui/card";
@@ -154,6 +155,7 @@ export default function DashboardPage() {
                 spendableAmount={data.spendableAmount}
                 daysInMonth={data.daysInMonth}
               />
+              <SavingsTracker />
             </div>
 
             {/* 右カラム: 収支サマリー + 税金 + チャート + 取引 */}
