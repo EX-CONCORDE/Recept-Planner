@@ -44,10 +44,15 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
             key={tx.id}
             className="flex items-center justify-between rounded-lg border p-3"
           >
-            <div className="flex flex-col gap-0.5">
-              <span className="text-sm font-medium">
-                {tx.merchantName ?? tx.memo ?? "不明"}
+            <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+              <span className="text-sm font-medium truncate">
+                {tx.merchantName || "不明"}
               </span>
+              {tx.memo && (
+                <span className="text-xs text-muted-foreground truncate">
+                  {tx.memo}
+                </span>
+              )}
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span>{formatDate(tx.txDate)}</span>
                 {tx.category && (
