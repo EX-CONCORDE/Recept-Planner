@@ -1,193 +1,173 @@
 # レシートプランナー
 
-レシート・請求書のスクリーンショットをAIで読み取り、支出を自動管理する個人用Webアプリ。
+レシート・請求書のスクリーンショットをAIで読み取り、支出を自動管理するマルチユーザー対応Webアプリ。
 
 ## 機能
 
+- **マルチユーザー**: 招待制ユーザー管理、Google OAuth + パスワード認証、管理者パネル
 - **レシートAI読み取り**: カメラ撮影/画像アップロード → LMStudio Vision LLMで金額・店名・カテゴリを自動抽出
 - **収支管理ダッシュボード**: 月次の予算バー、カテゴリ別円グラフ/棒グラフ、日別支出トレンド
 - **税金自動計算**: 額面月収から社会保険料・所得税・住民税を2026年度税率で自動控除
   - 47都道府県別の健康保険料率・住民税超過課税に対応
   - 子ども・子育て支援金（2026年4月新設）対応
-- **貯金管理**: 目標設定、残額バー表示、貯金切り崩し警告
+- **貯金管理**: 目標設定、達成予測、プログレスバー、貯金切り崩し警告
 - **住民税予測**: 今年の収入から来年の住民税を概算
 - **レスポンシブ**: スマホ（ボトムナビ）/ PC（サイドバー + 2カラム）
 
 ## 技術スタック
 
-- **フロント**: Next.js 15 (App Router) + TypeScript + Tailwind CSS + shadcn/ui + Recharts
-- **DB**: PostgreSQL 16 (Docker)
-- **ORM**: Prisma v7
-- **AI**: LMStudio (Vision対応LLM、別サーバー)
+| 領域 | 技術 |
+|------|------|
+| フロントエンド | Next.js 16 (App Router) + TypeScript + Tailwind CSS v4 + shadcn/ui + Recharts |
+| バックエンド | Next.js API Routes + Prisma v7 |
+| データベース | PostgreSQL 16 |
+| 認証 | Auth.js v5 (NextAuth) — Google OAuth + Credentials |
+| AI | LMStudio (Vision対応LLM、別サーバー) |
 
-## セットアップ
+## アーキテクチャ
+
+```
+[スマホ/PC ブラウザ]
+        │
+        │ HTTP (port 3000)
+        ▼
+┌─── サーバー (Ubuntu 24.04) ─────────┐
+│                                      │
+│   [Next.js App]  ←→  [PostgreSQL]    │
+│     ├─ Auth.js (認証)                │
+│     ├─ API Routes (全ルートuserIdスコープ)│
+│     └─ proxy.ts (ルート保護)         │
+│        │                             │
+│        │ HTTP (内部ネットワーク)       │
+│        ▼                             │
+│   [LMStudio VM] (Vision LLM)        │
+└──────────────────────────────────────┘
+```
+
+---
+
+## 初回セットアップ
 
 ### 必要なもの
 
+- Ubuntu 24.04 Server（または同等のLinux）
 - Node.js 22+
-- Docker & Docker Compose
+- PostgreSQL 16
 - （AI機能を使う場合）LMStudioが稼働しているサーバー
 
-### 1. リポジトリをクローン
-
-```bash
-git clone https://github.com/EX-CONCORDE/Recept-Planner.git
-cd Recept-Planner
-```
-
-### 2. 環境変数を設定
-
-```bash
-cp .env.example .env
-```
-
-`.env` を編集:
-
-```env
-# PostgreSQLのパスワードを安全な値に変更
-DATABASE_URL="postgresql://recept:YOUR_SECURE_PASSWORD@localhost:5432/recept_planner"
-
-# LMStudioサーバーのアドレス（AI機能を使う場合）
-LMSTUDIO_BASE_URL="http://192.168.1.x:1234"
-LMSTUDIO_MODEL="gemma-3-12b"
-
-# レシート画像の保存先
-RECEIPT_STORAGE_PATH="./data/receipts"
-```
-
-### 3A. Docker Compose で本番デプロイ（推奨）
-
-```bash
-# .envにPOSTGRES_PASSWORDとLMSTUDIO_BASE_URLを設定
-export POSTGRES_PASSWORD=your_secure_password
-export LMSTUDIO_BASE_URL=http://192.168.1.x:1234
-
-docker compose -f docker-compose.prod.yml up -d
-```
-
-初回はマイグレーションとシードが必要:
-
-```bash
-# コンテナに入ってマイグレーション
-docker compose -f docker-compose.prod.yml exec app npx prisma migrate deploy
-
-# シードデータ（デフォルトカテゴリ）
-docker compose -f docker-compose.prod.yml exec app npx jiti prisma/seed.ts
-```
-
-http://localhost:3000 でアクセス。
-
-### 3B. 開発環境セットアップ
-
-```bash
-# 依存関係インストール
-npm install
-
-# PostgreSQL起動
-docker compose up -d
-
-# Prismaクライアント生成 + マイグレーション
-npx prisma generate
-npx prisma migrate dev
-
-# シードデータ投入
-npx jiti prisma/seed.ts
-
-# 開発サーバー起動
-npm run dev
-```
-
-http://localhost:3000 でアクセス。
-
-## Ubuntu Server（Proxmox VM）でのセットアップ
-
-新しいサーバーに一からデプロイする手順です。
-
-### 1. サーバー準備（Ubuntu 24.04 Server）
+### 1. サーバー準備
 
 ```bash
 # システム更新
 sudo apt update && sudo apt upgrade -y
 
-# Docker インストール
-curl -fsSL https://get.docker.com | sudo sh
-sudo usermod -aG docker $USER
-# ログアウト→ログインして反映
-
-# （Dockerを使わない場合）Node.js 22 インストール
+# Node.js 22 インストール
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-sudo apt install -y nodejs
+sudo apt install -y nodejs git
 
-# Git
-sudo apt install -y git
+# PostgreSQL 16 インストール
+sudo apt install -y postgresql-16 postgresql-client-16
 ```
 
-### 2. アプリのデプロイ
+### 2. PostgreSQL セットアップ
 
 ```bash
-# クローン
+# DBユーザーとデータベースを作成
+sudo -u postgres psql << 'SQL'
+CREATE USER recept WITH PASSWORD 'ここに安全なパスワード';
+CREATE DATABASE recept_planner OWNER recept;
+GRANT ALL PRIVILEGES ON DATABASE recept_planner TO recept;
+SQL
+```
+
+### 3. アプリのクローンとインストール
+
+```bash
 cd /opt
 sudo git clone https://github.com/EX-CONCORDE/Recept-Planner.git
 sudo chown -R $USER:$USER Recept-Planner
 cd Recept-Planner
 
-# 環境変数
+# 依存関係インストール
+npm install
+```
+
+### 4. 環境変数を設定
+
+```bash
 cp .env.example .env
 nano .env
-# → DATABASE_URL のパスワードを変更
-# → LMSTUDIO_BASE_URL をLMStudioサーバーのIPに設定
-# → LMSTUDIO_MODEL を使用するモデル名に設定
 ```
 
-### 3A. Docker で起動（推奨）
+`.env` を以下のように編集:
 
-```bash
-export POSTGRES_PASSWORD=your_secure_password
-export LMSTUDIO_BASE_URL=http://192.168.x.x:1234
+```env
+# PostgreSQL（手順2で設定したパスワードに合わせる）
+DATABASE_URL="postgresql://recept:ここに安全なパスワード@localhost:5432/recept_planner"
 
-# ビルド＆起動
-docker compose -f docker-compose.prod.yml up -d --build
+# Auth.js（必須）
+AUTH_SECRET="ランダムな32文字以上の文字列"
+# ↑ 以下のコマンドで生成: openssl rand -base64 32
 
-# 初回: DBマイグレーション＆シード
-docker compose -f docker-compose.prod.yml exec app npx prisma migrate deploy
-docker compose -f docker-compose.prod.yml exec app npx jiti prisma/seed.ts
+# Google OAuth（任意。未設定ならパスワード認証のみ）
+# AUTH_GOOGLE_ID=""
+# AUTH_GOOGLE_SECRET=""
+# ↑ 設定方法: docs/google-oauth-setup.md を参照
+
+# 初期管理者（seedで使用）
+ADMIN_EMAIL="admin@local"
+ADMIN_NAME="管理者"
+ADMIN_PASSWORD="ここに管理者パスワード"
+
+# LMStudio（AI機能を使う場合）
+LMSTUDIO_BASE_URL="http://192.168.1.x:1234"
+LMSTUDIO_MODEL="gemma-3-12b"
+
+# レシート画像保存先
+RECEIPT_STORAGE_PATH="./data/receipts"
 ```
 
-### 3B. Node.js で直接起動
+### 5. データベース初期化
 
 ```bash
-npm install
+# Prismaクライアント生成
 npx prisma generate
 
-# PostgreSQLだけDockerで起動
-docker compose up -d
-
-# マイグレーション＆シード
+# マイグレーション実行
 npx prisma migrate deploy
-npx jiti prisma/seed.ts
 
-# ビルド＆起動
+# 初期管理者 + デフォルトカテゴリ作成
+npx prisma db seed
+```
+
+### 6. ビルドと起動
+
+```bash
+# 本番ビルド
 npm run build
+
+# 起動
 npm run start
 ```
 
-### 4. ファイアウォール設定
+`http://<サーバーIP>:3000` にアクセスしてログイン画面が表示されればOK。
+
+### 7. 初回ログイン
+
+- メール: `.env` の `ADMIN_EMAIL`（デフォルト: `admin@local`）
+- パスワード: `.env` の `ADMIN_PASSWORD` で設定した値
+
+ログイン後、サイドバーの「ユーザー管理」から他のユーザーを招待できます。
+
+---
+
+## systemd で自動起動
 
 ```bash
-sudo ufw enable
-sudo ufw allow ssh
-sudo ufw allow from 192.168.0.0/16 to any port 3000
-sudo ufw deny 3000
-sudo ufw status
-```
-
-### 5. systemd で自動起動（Docker不使用の場合）
-
-```bash
-sudo tee /etc/systemd/system/recept-planner.service << 'EOF'
+sudo tee /etc/systemd/system/recept-planner.service << EOF
 [Unit]
 Description=Recept Planner
-After=network.target docker.service
+After=network.target postgresql.service
 
 [Service]
 Type=simple
@@ -202,31 +182,76 @@ Environment=NODE_ENV=production
 WantedBy=multi-user.target
 EOF
 
+sudo systemctl daemon-reload
 sudo systemctl enable recept-planner
 sudo systemctl start recept-planner
 sudo systemctl status recept-planner
 ```
 
-### 6. 動作確認
+## ファイアウォール設定
 
-ブラウザで `http://<サーバーIP>:3000` にアクセス。
-
-### アーキテクチャ図
-
+```bash
+sudo ufw enable
+sudo ufw allow ssh
+sudo ufw allow from 192.168.0.0/16 to any port 3000
+sudo ufw deny 3000
 ```
-[スマホ/PC ブラウザ]
-        │
-        │ HTTP (port 3000)
-        ▼
-┌─── Proxmox VM (Ubuntu 24.04) ───┐
-│                                   │
-│   [Next.js App]  ←→  [PostgreSQL] │
-│        │                          │
-│        │ HTTP (内部ネットワーク)     │
-│        ▼                          │
-│   [LMStudio VM]                   │
-│   (Vision LLM)                    │
-└───────────────────────────────────┘
+
+---
+
+## ユーザー管理
+
+### 認証方式
+
+| 方式 | 用途 |
+|------|------|
+| **パスワード認証** | LAN内運用（デフォルト）。管理者がメール+パスワードでユーザーを作成 |
+| **Google OAuth** | インターネット接続がある環境。`AUTH_GOOGLE_ID` 設定時に自動有効化 |
+
+両方を同時に使えます。Google OAuth の設定手順は [`docs/google-oauth-setup.md`](docs/google-oauth-setup.md) を参照。
+
+### 招待制
+
+- ユーザー登録ページはありません
+- 管理者が `/admin` からユーザーを作成します
+- 新規ユーザーにはデフォルトカテゴリが自動コピーされます
+- Google OAuth の場合もDBに登録済みのメールでのみログイン可能
+
+### ロール
+
+| ロール | 権限 |
+|--------|------|
+| `admin` | 全機能 + ユーザー管理（`/admin`） |
+| `member` | 自分のデータの閲覧・編集のみ |
+
+---
+
+## アップデート方法
+
+```bash
+cd /opt/Recept-Planner
+git pull
+
+npm install
+npx prisma generate
+npx prisma migrate deploy
+npm run build
+
+# systemd使用時
+sudo systemctl restart recept-planner
+```
+
+## バックアップ
+
+```bash
+# DBバックアップ
+pg_dump -U recept recept_planner > backup_$(date +%Y%m%d).sql
+
+# 復元
+psql -U recept recept_planner < backup_20260401.sql
+
+# レシート画像のバックアップ
+tar czf receipts_$(date +%Y%m%d).tar.gz data/receipts/
 ```
 
 ## 推奨LLMモデル（LMStudio用）
@@ -236,23 +261,6 @@ sudo systemctl status recept-planner
 | Gemma 3 12B | ~8GB (Q4) | 優秀 | **最推奨** |
 | Qwen2.5-VL 7B | ~6GB (Q4) | 優秀 | 推奨 |
 | Qwen2.5-VL 32B | ~20GB (Q4) | 非常に優秀 | VRAM十分なら |
-
-## セキュリティ
-
-- **認証なし**の個人用アプリです。LAN内限定で使用してください
-- UFWでLAN外からのポート3000をブロック推奨: `sudo ufw allow from 192.168.0.0/16 to any port 3000`
-- 画像はpublic外に保存され、API経由でのみアクセス可能
-- DBパスワードは必ず変更してください
-
-## バックアップ
-
-```bash
-# DBバックアップ
-docker compose exec db pg_dump -U recept recept_planner > backup_$(date +%Y%m%d).sql
-
-# 復元
-docker compose exec -T db psql -U recept recept_planner < backup_20260401.sql
-```
 
 ## npm scripts
 
