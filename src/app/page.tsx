@@ -6,6 +6,7 @@ import { CategoryChart } from "@/components/dashboard/category-chart";
 import { CategoryBarChart } from "@/components/dashboard/category-bar-chart";
 import { DailyTrendChart } from "@/components/dashboard/daily-trend-chart";
 import { TaxBreakdownCard } from "@/components/dashboard/tax-breakdown";
+import { IncomeExpenseSummary } from "@/components/dashboard/income-expense-summary";
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { MonthSelector } from "@/components/layout/month-selector";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,6 +26,12 @@ interface DashboardData {
   usageRate: number;
   isOverBudget: boolean;
   byCategory: {
+    categoryId: number;
+    categoryName: string;
+    total: number;
+    count: number;
+  }[];
+  incomeByCategory: {
     categoryId: number;
     categoryName: string;
     total: number;
@@ -149,8 +156,15 @@ export default function DashboardPage() {
               />
             </div>
 
-            {/* 右カラム: 税金 + チャート + 取引 */}
+            {/* 右カラム: 収支サマリー + 税金 + チャート + 取引 */}
             <div className="space-y-4">
+              <IncomeExpenseSummary
+                totalIncome={data.totalIncome}
+                totalExpenses={data.totalExpenses}
+                buffer={data.buffer}
+                byCategory={data.byCategory}
+                incomeByCategory={data.incomeByCategory}
+              />
               {data.taxBreakdown && (
                 <TaxBreakdownCard data={data.taxBreakdown} />
               )}

@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { formatYen, formatDate, getCurrentYearMonth } from "@/lib/format";
 import { MonthSelector } from "@/components/layout/month-selector";
+import { EditTransactionDialog } from "@/components/expense/edit-transaction-dialog";
 import { toast } from "sonner";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, Pencil } from "lucide-react";
 
 interface Category {
   id: number;
@@ -33,6 +34,9 @@ export default function ExpensesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // 編集
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
 
   // フォーム
   const [txType, setTxType] = useState("expense");
@@ -232,6 +236,12 @@ export default function ExpensesPage() {
                   {formatYen(tx.amount)}
                 </span>
                 <button
+                  onClick={() => setEditingTx(tx)}
+                  className="p-1 text-muted-foreground hover:text-foreground"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+                <button
                   onClick={() => handleDelete(tx.id)}
                   className="p-1 text-muted-foreground hover:text-red-500"
                 >
@@ -271,6 +281,16 @@ export default function ExpensesPage() {
         </div>
         <div>{transactionList}</div>
       </div>
+
+      {editingTx && (
+        <EditTransactionDialog
+          transaction={editingTx}
+          categories={categories}
+          open={!!editingTx}
+          onClose={() => setEditingTx(null)}
+          onSaved={fetchData}
+        />
+      )}
     </div>
   );
 }

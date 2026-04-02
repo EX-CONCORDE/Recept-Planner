@@ -62,6 +62,25 @@ export async function GET(_request: NextRequest, { params }: Params) {
       ),
   ).sort((a, b) => b.total - a.total);
 
+  // 収入カテゴリ別集計
+  const incomeByCategory = Object.values(
+    transactions
+      .filter((t) => t.txType === "income")
+      .reduce(
+        (acc, t) => {
+          const key = t.categoryId ?? 0;
+          const name = t.category?.name ?? "未分類";
+          if (!acc[key]) {
+            acc[key] = { categoryId: key, categoryName: name, total: 0, count: 0 };
+          }
+          acc[key].total += t.amount;
+          acc[key].count += 1;
+          return acc;
+        },
+        {} as Record<number, { categoryId: number; categoryName: string; total: number; count: number }>,
+      ),
+  ).sort((a, b) => b.total - a.total);
+
   // 日別支出集計（折れ線グラフ用）
   const dailyExpenseMap: Record<number, number> = {};
   for (const t of transactions.filter((t) => t.txType === "expense")) {
@@ -128,6 +147,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
     usageRate,
     isOverBudget: remaining < 0,
     byCategory,
+    incomeByCategory,
     dailyTrend,
     idealDailyBudget,
     daysInMonth,
