@@ -45,8 +45,8 @@ export function SavingsSidebar() {
         </div>
       </div>
 
-      {/* 目標（最大2件） */}
-      {activeGoals.slice(0, 2).map((goal) => {
+      {/* 目標 */}
+      {activeGoals.slice(0, 3).map((goal) => {
         const total = goal.currentAmount + data.totalSaved;
         const progress = goal.targetAmount > 0
           ? Math.min(Math.round((total / goal.targetAmount) * 100), 100)
@@ -62,18 +62,21 @@ export function SavingsSidebar() {
           <div key={goal.id} className="px-2 space-y-1">
             <div className="flex items-center gap-1.5">
               <Target className="h-3 w-3 text-muted-foreground shrink-0" />
-              <span className="text-[10px] text-muted-foreground truncate">
+              <span className="text-[10px] text-muted-foreground truncate flex-1">
                 {goal.name}
               </span>
-              <span className="text-[10px] font-medium ml-auto shrink-0">
-                {progress}%
-              </span>
             </div>
-            <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
+            <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
               <div
-                className={`h-full rounded-full ${progressColor}`}
+                className={`h-full rounded-full transition-all ${progressColor}`}
                 style={{ width: `${progress}%` }}
               />
+            </div>
+            <div className="flex justify-between text-[10px]">
+              <span className="font-medium">{progress}%</span>
+              <span className="text-muted-foreground">
+                {formatYen(goal.targetAmount)}
+              </span>
             </div>
           </div>
         );

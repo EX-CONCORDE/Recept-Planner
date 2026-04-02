@@ -2,15 +2,13 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
+  PieChart,
+  Pie,
   Cell,
-  Legend,
+  ResponsiveContainer,
+  Tooltip,
 } from "recharts";
+import type { PieLabelRenderProps } from "recharts";
 import { formatYen } from "@/lib/format";
 import { TrendingUp, TrendingDown, Scale } from "lucide-react";
 
@@ -41,10 +39,13 @@ export function IncomeExpenseSummary({
 }: IncomeExpenseSummaryProps) {
   const netBalance = totalIncome - totalExpenses;
 
-  const chartData = [
-    { name: "収入", amount: totalIncome },
-    { name: "支出", amount: totalExpenses },
-  ];
+  // 円グラフ用データ（収入と支出）
+  const pieData = [
+    { name: "収入", value: totalIncome },
+    { name: "支出", value: totalExpenses },
+  ].filter((d) => d.value > 0);
+
+  const hasData = totalIncome > 0 || totalExpenses > 0;
 
   return (
     <Card>
@@ -88,24 +89,30 @@ export function IncomeExpenseSummary({
           </div>
         </div>
 
-        {/* 棒グラフ */}
-        {(totalIncome > 0 || totalExpenses > 0) && (
-          <ResponsiveContainer width="100%" height={120}>
-            <BarChart data={chartData} layout="vertical" margin={{ left: 0, right: 10 }}>
-              <XAxis
-                type="number"
-                tickFormatter={(v) =>
-                  v >= 10000 ? `${(v / 10000).toFixed(0)}万` : `${(v / 1000).toFixed(0)}k`
-                }
-                fontSize={10}
-              />
-              <YAxis type="category" dataKey="name" width={40} fontSize={12} />
-              <Tooltip formatter={(value) => formatYen(Number(value))} />
-              <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
+        {/* 円グラフ */}
+        {hasData && (
+          <ResponsiveContainer width="100%" height={180}>
+            <PieChart>
+              <Pie
+                data={pieData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                innerRadius={45}
+                outerRadius={75}
+                label={(props: PieLabelRenderProps) => {
+                  const name = String(props.name ?? "");
+                  const percent = Number(props.percent ?? 0);
+                  return `${name} ${(percent * 100).toFixed(0)}%`;
+                }}
+                labelLine={false}
+              >
                 <Cell fill="#22c55e" />
                 <Cell fill="#ef4444" />
-              </Bar>
-            </BarChart>
+              </Pie>
+              <Tooltip formatter={(value) => formatYen(Number(value))} />
+            </PieChart>
           </ResponsiveContainer>
         )}
 
