@@ -60,7 +60,8 @@ export async function verifyCfAccessJwt(
       name,
       exp: payload.exp ?? Math.floor(Date.now() / 1000) + 86400,
     };
-  } catch {
+  } catch (e) {
+    console.error("[CF Access] JWT verification failed:", e);
     return null;
   }
 }
