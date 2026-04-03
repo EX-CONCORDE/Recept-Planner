@@ -1,10 +1,11 @@
 # レシートプランナー
 
-レシート・請求書のスクリーンショットをAIで読み取り、支出を自動管理するマルチユーザー対応Webアプリ。
+レシート・請求書のスクリーンショットをAIで読み取り、支出を自動管理するマルチユーザー対応Webアプリ。  
+Cloudflare Tunnel で外部公開し、Cloudflare Access (Zero Trust) でユーザー認証を一元管理できます。
 
 ## 機能
 
-- **マルチユーザー**: 招待制ユーザー管理、Google OAuth + パスワード認証、管理者パネル
+- **マルチユーザー**: Cloudflare Access 自動ログイン / Google OAuth / パスワード認証
 - **レシートAI読み取り**: カメラ撮影/画像アップロード → LMStudio Vision LLMで金額・店名・カテゴリを自動抽出
 - **収支管理ダッシュボード**: 月次の予算バー、カテゴリ別円グラフ/棒グラフ、日別支出トレンド
 - **税金自動計算**: 額面月収から社会保険料・所得税・住民税を2026年度税率で自動控除
@@ -21,27 +22,36 @@
 | フロントエンド | Next.js 16 (App Router) + TypeScript + Tailwind CSS v4 + shadcn/ui + Recharts |
 | バックエンド | Next.js API Routes + Prisma v7 |
 | データベース | PostgreSQL 16 |
-| 認証 | Auth.js v5 (NextAuth) — Google OAuth + Credentials |
+| 認証 | Auth.js v5 — Cloudflare Access / Google OAuth / Credentials |
+| 外部公開 | Cloudflare Tunnel (`cloudflared`) + Cloudflare Access (Zero Trust) |
 | AI | LMStudio (Vision対応LLM、別サーバー) |
 
 ## アーキテクチャ
 
 ```
-[スマホ/PC ブラウザ]
-        │
-        │ HTTP (port 3000)
-        ▼
+[外部ユーザー]
+      │
+      │ HTTPS
+      ▼
+┌─ Cloudflare ────────────────────┐
+│  Access (Zero Trust 認証ゲート)  │
+│  Tunnel (cloudflared)           │
+└────────────┬────────────────────┘
+             │ HTTP (localhost:3000)
+             ▼
 ┌─── サーバー (Ubuntu 24.04) ─────────┐
 │                                      │
 │   [Next.js App]  ←→  [PostgreSQL]    │
-│     ├─ Auth.js (認証)                │
-│     ├─ API Routes (全ルートuserIdスコープ)│
-│     └─ proxy.ts (ルート保護)         │
+│     ├─ proxy.ts (CF JWT検出→自動ログイン)│
+│     ├─ Auth.js (セッション管理)      │
+│     └─ API Routes (userIdスコープ)   │
 │        │                             │
 │        │ HTTP (内部ネットワーク)       │
 │        ▼                             │
-│   [LMStudio VM] (Vision LLM)        │
+│   [LMStudio] (Vision LLM)           │
 └──────────────────────────────────────┘
+
+[LANユーザー] → http://<サーバーIP>:3000 → ログインページ（フォールバック）
 ```
 
 ---
@@ -53,6 +63,7 @@
 - Ubuntu 24.04 Server（または同等のLinux）
 - Node.js 22+
 - PostgreSQL 16
+- （外部公開する場合）Cloudflare アカウント + ドメイン
 - （AI機能を使う場合）LMStudioが稼働しているサーバー
 
 ### 1. サーバー準備
@@ -72,7 +83,6 @@ sudo apt install -y postgresql-16 postgresql-client-16
 ### 2. PostgreSQL セットアップ
 
 ```bash
-# DBユーザーとデータベースを作成
 sudo -u postgres psql << 'SQL'
 CREATE USER recept WITH PASSWORD 'ここに安全なパスワード';
 CREATE DATABASE recept_planner OWNER recept;
@@ -87,8 +97,6 @@ cd /opt
 sudo git clone https://github.com/EX-CONCORDE/Recept-Planner.git
 sudo chown -R $USER:$USER Recept-Planner
 cd Recept-Planner
-
-# 依存関係インストール
 npm install
 ```
 
@@ -99,20 +107,21 @@ cp .env.example .env
 nano .env
 ```
 
-`.env` を以下のように編集:
-
 ```env
 # PostgreSQL（手順2で設定したパスワードに合わせる）
 DATABASE_URL="postgresql://recept:ここに安全なパスワード@localhost:5432/recept_planner"
 
 # Auth.js（必須）
 AUTH_SECRET="ランダムな32文字以上の文字列"
-# ↑ 以下のコマンドで生成: openssl rand -base64 32
+# ↑ 生成: openssl rand -base64 32
 
-# Google OAuth（任意。未設定ならパスワード認証のみ）
+# Cloudflare Access（外部公開する場合。後述の手順で取得）
+# CF_ACCESS_TEAM="your-team"
+# CF_ACCESS_AUD="your-audience-tag"
+
+# Google OAuth（任意）
 # AUTH_GOOGLE_ID=""
 # AUTH_GOOGLE_SECRET=""
-# ↑ 設定方法: docs/google-oauth-setup.md を参照
 
 # 初期管理者（seedで使用）
 ADMIN_EMAIL="admin@local"
@@ -130,23 +139,15 @@ RECEIPT_STORAGE_PATH="./data/receipts"
 ### 5. データベース初期化
 
 ```bash
-# Prismaクライアント生成
 npx prisma generate
-
-# マイグレーション実行
 npx prisma migrate deploy
-
-# 初期管理者 + デフォルトカテゴリ作成
 npx prisma db seed
 ```
 
 ### 6. ビルドと起動
 
 ```bash
-# 本番ビルド
 npm run build
-
-# 起動
 npm run start
 ```
 
@@ -157,7 +158,131 @@ npm run start
 - メール: `.env` の `ADMIN_EMAIL`（デフォルト: `admin@local`）
 - パスワード: `.env` の `ADMIN_PASSWORD` で設定した値
 
-ログイン後、サイドバーの「ユーザー管理」から他のユーザーを招待できます。
+---
+
+## Cloudflare Tunnel + Access で外部公開
+
+### 1. cloudflared のインストール
+
+```bash
+curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
+echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main" | sudo tee /etc/apt/sources.list.d/cloudflared.list
+sudo apt update && sudo apt install -y cloudflared
+```
+
+### 2. Tunnel の作成と認証
+
+```bash
+# Cloudflare にログイン（ブラウザが開く）
+cloudflared tunnel login
+
+# Tunnel を作成
+cloudflared tunnel create recept-planner
+
+# 設定ファイルを作成
+mkdir -p ~/.cloudflared
+cat > ~/.cloudflared/config.yml << EOF
+tunnel: <tunnel-id>
+credentials-file: /home/$USER/.cloudflared/<tunnel-id>.json
+
+ingress:
+  - hostname: recept.example.com
+    service: http://localhost:3000
+  - service: http_status:404
+EOF
+```
+
+`recept.example.com` は自分のドメインのサブドメインに置き換えてください。
+
+### 3. DNS レコードの設定
+
+```bash
+cloudflared tunnel route dns recept-planner recept.example.com
+```
+
+### 4. Cloudflare Access の設定
+
+1. [Cloudflare Zero Trust ダッシュボード](https://one.dash.cloudflare.com/) にアクセス
+2. **Access** → **Applications** → **Add an Application**
+3. **Self-hosted** を選択
+4. 設定:
+   - Application name: `レシートプランナー`
+   - Application domain: `recept.example.com`
+5. **Policy** を追加（例: 特定メールアドレスのみ許可）:
+   - Policy name: `Allowed Users`
+   - Action: **Allow**
+   - Include: **Emails** → 許可するメールアドレスを入力
+6. 作成後、**Application Audience (AUD) Tag** をコピー
+7. **Settings** の **Team domain** を確認（例: `your-team.cloudflareaccess.com` の `your-team` 部分）
+
+### 5. 環境変数に追加
+
+```bash
+nano /opt/Recept-Planner/.env
+```
+
+```env
+CF_ACCESS_TEAM="your-team"
+CF_ACCESS_AUD="コピーしたAUD Tag"
+```
+
+### 6. Tunnel をサービス化して起動
+
+```bash
+sudo cloudflared service install
+sudo systemctl enable cloudflared
+sudo systemctl start cloudflared
+```
+
+アプリも再起動:
+
+```bash
+sudo systemctl restart recept-planner
+```
+
+### 7. 動作確認
+
+`https://recept.example.com` にアクセス → Cloudflare Access のログイン画面 → 認証後、自動的にアプリにログインされる。
+
+**初回アクセスしたユーザーは自動的にアプリに登録されます**（デフォルトカテゴリ付き）。Cloudflare Access のポリシーでアクセスを許可されたユーザーのみ登録されるため、アプリ側での招待は不要です。
+
+---
+
+## 認証方式
+
+3つの認証方式を同時に利用でき、環境変数で有効/無効を切り替えます。
+
+| 方式 | 環境変数 | 用途 |
+|------|----------|------|
+| **Cloudflare Access** | `CF_ACCESS_TEAM` + `CF_ACCESS_AUD` | 外部公開時の推奨。ユーザーは自動登録 |
+| **Google OAuth** | `AUTH_GOOGLE_ID` + `AUTH_GOOGLE_SECRET` | Googleアカウントでログイン。[設定手順](docs/google-oauth-setup.md) |
+| **パスワード認証** | 常に有効 | LAN内フォールバック。管理者が `/admin` でユーザーを作成 |
+
+### 認証フロー
+
+```
+CF Tunnel経由:
+  ブラウザ → CF Access認証 → アプリ → CF JWT検出 → 自動セッション生成 → ダッシュボード
+
+LAN直接アクセス:
+  ブラウザ → アプリ → ログインページ → Credentials or Google OAuth → ダッシュボード
+```
+
+### ユーザー管理
+
+| 運用形態 | ユーザーの管理場所 |
+|----------|-------------------|
+| CF Access 利用時 | **Cloudflare Zero Trust** のポリシーで管理。アプリ側は自動登録 |
+| LAN内のみ | アプリの **管理パネル** (`/admin`) で管理者がユーザーを作成 |
+
+### ロール
+
+| ロール | 権限 |
+|--------|------|
+| `admin` | 全機能 + ユーザー管理（`/admin`） |
+| `member` | 自分のデータの閲覧・編集のみ |
+
+CF Access 経由で自動作成されたユーザーは `member` ロールです。管理者にするにはアプリの `/admin` で昇格してください。
 
 ---
 
@@ -185,7 +310,6 @@ EOF
 sudo systemctl daemon-reload
 sudo systemctl enable recept-planner
 sudo systemctl start recept-planner
-sudo systemctl status recept-planner
 ```
 
 ## ファイアウォール設定
@@ -193,36 +317,14 @@ sudo systemctl status recept-planner
 ```bash
 sudo ufw enable
 sudo ufw allow ssh
-sudo ufw allow from 192.168.0.0/16 to any port 3000
+
+# CF Tunnel経由のみで公開する場合、3000番ポートはlocalhostのみに制限
+# （cloudflaredがlocalhost:3000に接続するため外部公開不要）
 sudo ufw deny 3000
+
+# LAN内からもアクセスする場合
+sudo ufw allow from 192.168.0.0/16 to any port 3000
 ```
-
----
-
-## ユーザー管理
-
-### 認証方式
-
-| 方式 | 用途 |
-|------|------|
-| **パスワード認証** | LAN内運用（デフォルト）。管理者がメール+パスワードでユーザーを作成 |
-| **Google OAuth** | インターネット接続がある環境。`AUTH_GOOGLE_ID` 設定時に自動有効化 |
-
-両方を同時に使えます。Google OAuth の設定手順は [`docs/google-oauth-setup.md`](docs/google-oauth-setup.md) を参照。
-
-### 招待制
-
-- ユーザー登録ページはありません
-- 管理者が `/admin` からユーザーを作成します
-- 新規ユーザーにはデフォルトカテゴリが自動コピーされます
-- Google OAuth の場合もDBに登録済みのメールでのみログイン可能
-
-### ロール
-
-| ロール | 権限 |
-|--------|------|
-| `admin` | 全機能 + ユーザー管理（`/admin`） |
-| `member` | 自分のデータの閲覧・編集のみ |
 
 ---
 
@@ -231,13 +333,10 @@ sudo ufw deny 3000
 ```bash
 cd /opt/Recept-Planner
 git pull
-
 npm install
 npx prisma generate
 npx prisma migrate deploy
 npm run build
-
-# systemd使用時
 sudo systemctl restart recept-planner
 ```
 
