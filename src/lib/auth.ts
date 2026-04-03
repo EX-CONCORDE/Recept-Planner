@@ -1,5 +1,4 @@
 import NextAuth from "next-auth";
-import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
@@ -12,17 +11,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
 
   providers: [
-    // Google OAuth（環境変数が設定されている場合のみ有効）
-    ...(process.env.AUTH_GOOGLE_ID
-      ? [
-          Google({
-            clientId: process.env.AUTH_GOOGLE_ID,
-            clientSecret: process.env.AUTH_GOOGLE_SECRET!,
-          }),
-        ]
-      : []),
-
-    // Credentials（LAN fallback）
+    // Credentials（LAN fallback。外部はCloudflare Accessで認証）
     Credentials({
       credentials: {
         email: { label: "メール", type: "email" },
@@ -50,38 +39,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
 
   callbacks: {
-    // 招待制: DBに登録済み & isActive のみ許可
-    async signIn({ user, account }) {
-      // Credentials は authorize() で既にチェック済み
-      if (account?.provider === "credentials") return true;
-
-      // OAuth: DBにメールが存在するかチェック
-      if (!user.email) return false;
-      const dbUser = await prisma.user.findUnique({
-        where: { email: user.email },
-      });
-      if (!dbUser || !dbUser.isActive) {
-        return "/login?error=NotInvited";
-      }
-      return true;
-    },
-
-    async jwt({ token, user, account }) {
-      // 初回サインイン時にDBからユーザー情報を載せる
+    async jwt({ token, user }) {
       if (user) {
-        if (account?.provider === "credentials") {
-          token.userId = Number(user.id);
-          token.role = (user as { role?: string }).role ?? "member";
-        } else {
-          // OAuth: DBから取得
-          const dbUser = await prisma.user.findUnique({
-            where: { email: token.email! },
-          });
-          if (dbUser) {
-            token.userId = dbUser.id;
-            token.role = dbUser.role;
-          }
-        }
+        token.userId = Number(user.id);
+        token.role = (user as { role?: string }).role ?? "member";
       }
       return token;
     },

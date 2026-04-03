@@ -5,7 +5,7 @@ Cloudflare Tunnel で外部公開し、Cloudflare Access (Zero Trust) でユー�
 
 ## 機能
 
-- **マルチユーザー**: Cloudflare Access 自動ログイン / Google OAuth / パスワード認証
+- **マルチユーザー**: Cloudflare Access 自動ログイン（Google等のIdPはCF側で設定）/ パスワード認証（LAN用）
 - **レシートAI読み取り**: カメラ撮影/画像アップロード → LMStudio Vision LLMで金額・店名・カテゴリを自動抽出
 - **収支管理ダッシュボード**: 月次の予算バー、カテゴリ別円グラフ/棒グラフ、日別支出トレンド
 - **税金自動計算**: 額面月収から社会保険料・所得税・住民税を2026年度税率で自動控除
@@ -22,7 +22,7 @@ Cloudflare Tunnel で外部公開し、Cloudflare Access (Zero Trust) でユー�
 | フロントエンド | Next.js 16 (App Router) + TypeScript + Tailwind CSS v4 + shadcn/ui + Recharts |
 | バックエンド | Next.js API Routes + Prisma v7 |
 | データベース | PostgreSQL 16 |
-| 認証 | Auth.js v5 — Cloudflare Access / Google OAuth / Credentials |
+| 認証 | Auth.js v5 — Cloudflare Access (自動ログイン) / Credentials (LAN fallback) |
 | 外部公開 | Cloudflare Tunnel (`cloudflared`) + Cloudflare Access (Zero Trust) |
 | AI | LMStudio (Vision対応LLM、別サーバー) |
 
@@ -118,10 +118,6 @@ AUTH_SECRET="ランダムな32文字以上の文字列"
 # Cloudflare Access（外部公開する場合。後述の手順で取得）
 # CF_ACCESS_TEAM="your-team"
 # CF_ACCESS_AUD="your-audience-tag"
-
-# Google OAuth（任意）
-# AUTH_GOOGLE_ID=""
-# AUTH_GOOGLE_SECRET=""
 
 # 初期管理者（seedで使用）
 ADMIN_EMAIL="admin@local"
@@ -250,22 +246,21 @@ sudo systemctl restart recept-planner
 
 ## 認証方式
 
-3つの認証方式を同時に利用でき、環境変数で有効/無効を切り替えます。
+2つの認証方式があり、環境変数で有効/無効を切り替えます。
 
 | 方式 | 環境変数 | 用途 |
 |------|----------|------|
-| **Cloudflare Access** | `CF_ACCESS_TEAM` + `CF_ACCESS_AUD` | 外部公開時の推奨。ユーザーは自動登録 |
-| **Google OAuth** | `AUTH_GOOGLE_ID` + `AUTH_GOOGLE_SECRET` | Googleアカウントでログイン。[設定手順](docs/google-oauth-setup.md) |
+| **Cloudflare Access** | `CF_ACCESS_TEAM` + `CF_ACCESS_AUD` | 外部公開時。Google等のIdPはCF Zero Trust側で設定。ユーザーは自動登録 |
 | **パスワード認証** | 常に有効 | LAN内フォールバック。管理者が `/admin` でユーザーを作成 |
 
 ### 認証フロー
 
 ```
-CF Tunnel経由:
-  ブラウザ → CF Access認証 → アプリ → CF JWT検出 → 自動セッション生成 → ダッシュボード
+CF Tunnel経由（外部）:
+  ブラウザ → CF Access (Google等で認証) → アプリ → CF JWT検出 → 自動ログイン → ダッシュボード
 
 LAN直接アクセス:
-  ブラウザ → アプリ → ログインページ → Credentials or Google OAuth → ダッシュボード
+  ブラウザ → アプリ → ログインページ → メール+パスワード → ダッシュボード
 ```
 
 ### ユーザー管理
