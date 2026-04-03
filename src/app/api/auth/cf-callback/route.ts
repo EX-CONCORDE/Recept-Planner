@@ -4,17 +4,31 @@ import { prisma } from "@/lib/prisma";
 import { verifyCfAccessJwt } from "@/lib/cf-access";
 import { createUserWithDefaults } from "@/lib/default-categories";
 
+/**
+ * CF Tunnel 経由の場合 request.url が http://localhost:3000 になるため、
+ * x-forwarded-host / x-forwarded-proto から実際のURLを復元する。
+ */
+function getExternalUrl(request: NextRequest, path: string): URL {
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
+
+  if (forwardedHost) {
+    return new URL(path, `${forwardedProto}://${forwardedHost}`);
+  }
+  return new URL(path, request.url);
+}
+
 export async function GET(request: NextRequest) {
   const cfToken = request.headers.get("Cf-Access-Jwt-Assertion");
   if (!cfToken) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(getExternalUrl(request, "/login"));
   }
 
   // CF JWT 検証
   const payload = await verifyCfAccessJwt(cfToken);
   if (!payload) {
     return NextResponse.redirect(
-      new URL("/login?error=CfAccessFailed", request.url),
+      getExternalUrl(request, "/login?error=CfAccessFailed"),
     );
   }
 
@@ -32,7 +46,7 @@ export async function GET(request: NextRequest) {
 
   if (!user.isActive) {
     return NextResponse.redirect(
-      new URL("/login?error=AccountDisabled", request.url),
+      getExternalUrl(request, "/login?error=AccountDisabled"),
     );
   }
 
@@ -56,13 +70,14 @@ export async function GET(request: NextRequest) {
   const callbackUrl =
     request.nextUrl.searchParams.get("callbackUrl") ?? "/";
   const response = NextResponse.redirect(
-    new URL(callbackUrl, request.url),
+    getExternalUrl(request, callbackUrl),
   );
 
   // Auth.js セッションクッキーをセット
+  const isSecure = request.headers.get("x-forwarded-proto") === "https";
   response.cookies.set("authjs.session-token", token, {
     httpOnly: true,
-    secure: request.nextUrl.protocol === "https:",
+    secure: isSecure,
     sameSite: "lax",
     path: "/",
     maxAge,

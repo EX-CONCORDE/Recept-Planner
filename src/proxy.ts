@@ -8,6 +8,20 @@ const cfAccessEnabled = !!(
   process.env.CF_ACCESS_TEAM && process.env.CF_ACCESS_AUD
 );
 
+/**
+ * CF Tunnel 経由の場合 request.url が http://localhost:3000 になるため、
+ * x-forwarded-host / x-forwarded-proto から実際のURLを復元する。
+ */
+function getExternalUrl(request: NextRequest, path: string): URL {
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
+
+  if (forwardedHost) {
+    return new URL(path, `${forwardedProto}://${forwardedHost}`);
+  }
+  return new URL(path, request.url);
+}
+
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -30,14 +44,14 @@ export function proxy(request: NextRequest) {
     const cfJwt = request.headers.get("Cf-Access-Jwt-Assertion");
     if (cfJwt) {
       // CF JWT あり → cf-callback で自動ログイン
-      const callbackUrl = new URL("/api/auth/cf-callback", request.url);
+      const callbackUrl = getExternalUrl(request, "/api/auth/cf-callback");
       callbackUrl.searchParams.set("callbackUrl", pathname);
       return NextResponse.redirect(callbackUrl);
     }
   }
 
   // CF JWT なし → 通常のログインページ（LAN fallback）
-  const loginUrl = new URL("/login", request.url);
+  const loginUrl = getExternalUrl(request, "/login");
   loginUrl.searchParams.set("callbackUrl", pathname);
   return NextResponse.redirect(loginUrl);
 }
