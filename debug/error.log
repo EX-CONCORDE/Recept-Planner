@@ -27,25 +27,3 @@ JWKS downloaded successfully from https://msmtol.cloudflareaccess.com/cdn-cgi/ac
   type: 'default',
   url: ''
 }
-⨯ Response {
-  status: 401,
-  statusText: '',
-  headers: Headers { 'content-type': 'application/json' },
-  body: ReadableStream { locked: false, state: 'readable', supportsBYOB: true },
-  bodyUsed: false,
-  ok: false,
-  redirected: false,
-  type: 'default',
-  url: ''
-}
-⨯ Response {
-  status: 401,
-  statusText: '',
-  headers: Headers { 'content-type': 'application/json' },
-  body: ReadableStream { locked: false, state: 'readable', supportsBYOB: true },
-  bodyUsed: false,
-  ok: false,
-  redirected: false,
-  type: 'default',
-  url: ''
-}
