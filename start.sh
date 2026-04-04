@@ -20,5 +20,5 @@ if [ -d .next/standalone ]; then
   cp -r .next/static .next/standalone/.next/ 2>/dev/null || true
 fi
 
-# 起動
-exec node .next/standalone/server.js
+# 起動（--use-openssl-ca でシステムのCA証明書を使用）
+exec node --use-openssl-ca .next/standalone/server.js
