@@ -144,10 +144,12 @@ npx prisma db seed
 
 ```bash
 npm run build
-npm run start
+./start.sh
 ```
 
 `http://<サーバーIP>:3000` にアクセスしてログイン画面が表示されればOK。
+
+> **注意**: `npm run start` ではなく `./start.sh` を使ってください。standalone ビルドの `.env` 読み込み・静的ファイルコピー・CA証明書設定を自動で行います。
 
 ### 7. 初回ログイン
 
@@ -293,7 +295,7 @@ After=network.target postgresql.service
 Type=simple
 User=$USER
 WorkingDirectory=/opt/Recept-Planner
-ExecStart=/usr/bin/npm run start
+ExecStart=/opt/Recept-Planner/start.sh
 Restart=on-failure
 RestartSec=10
 Environment=NODE_ENV=production
