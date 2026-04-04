@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Receipt,
   ListPlus,
+  RefreshCw,
   Tag,
   Settings,
 } from "lucide-react";
@@ -15,6 +16,7 @@ const navItems = [
   { href: "/", label: "ダッシュボード", icon: LayoutDashboard },
   { href: "/expenses", label: "支出・収入", icon: ListPlus },
   { href: "/upload", label: "レシート撮影", icon: Receipt },
+  { href: "/subscriptions", label: "サブスク管理", icon: RefreshCw },
   { href: "/categories", label: "カテゴリ管理", icon: Tag },
   { href: "/settings", label: "月次設定", icon: Settings },
 ];

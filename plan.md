@@ -1,246 +1,249 @@
-# Recept-Planner 実装計画（改訂版）
+# Recept-Planner 実装計画（全面改訂 v2.0）
+
+最終更新: 2026-04-04
 
 ## 1. 目的
 
-レシート・請求メールのスクリーンショットをアップロードし、AIで金額/日付/内容を抽出して支出（または入出金）を整理する。  
-さらに、毎月の収入と貯金目標を入力し、**今月あといくら使えるか**をバーとパーセンテージで可視化する個人用Webアプリを構築する。
+レシート・請求情報の登録を簡単にし、月次の家計状況を可視化する。  
+さらに、定額サブスクリプションを管理し、請求日に自動で支出トランザクションを生成して記録漏れを防ぐ。
 
-## 2. 確定要件（現時点）
+## 2. 前提・方針
 
-- 個人用（認証なし）
-- UI言語は日本語のみ
-- Web画面からカメラ起動・画像アップロード対応
-- OCR/抽出はLMStudio（別VMで稼働中）へ連携
-- DBはアプリサーバー内でセルフホスト
-- カテゴリ分類は「AI自動分類 + ユーザーのカスタム分類」
+- 対象: 個人利用（認証なし）
+- UI言語: 日本語のみ
+- 技術: Next.js App Router + TypeScript + Prisma + PostgreSQL + Zod
+- OCR/抽出: LMStudio連携（既存機能）
+- 追加方針: 既存データモデルとUIを壊さず、段階的にサブスク機能を拡張
 
 ## 3. スコープ
 
-### 3.1 Must（MVP）
+### 3.1 Must
 
-1. 画像アップロード（カメラ/ファイル）
-2. LMStudio Vision連携による抽出（候補）
-3. 抽出結果の確認・修正・保存
-4. 支出/収入データの手動登録・編集・削除
-5. 月次設定（収入、貯金目標）
-6. 使える金額、使用率、残額の可視化（バー・%）
-7. カテゴリ別の集計表示
+1. サブスクの登録・編集・停止/再開
+2. 月額/年額の請求サイクル管理
+3. 請求日到来時の自動トランザクション生成
+4. 二重引き落とし防止（冪等）
+5. ダッシュボードへのサブスク集計統合
+6. プリセットからのクイック追加
 
-### 3.2 Should（初期リリースで推奨）
+### 3.2 Should
 
-1. AI分類失敗時の手動再分類UI
-2. 月別履歴の参照
-3. OCR失敗時のリトライ・エラー案内
-4. CSVエクスポート
+1. プリセット検索（サービス名・カテゴリ）
+2. サブスク一覧のアクティブ/停止タブ
+3. 次回請求日の近い順表示
 
-### 3.3 Out（今回は除外）
+### 3.3 Out（今回やらない）
 
-- 複数ユーザー対応
-- クラウド認証基盤（Supabase Auth等）
-- 銀行API自動連携
+- 外部決済サービス連携
+- 銀行明細との自動照合
+- 通知配信（メール/Push）
 
-## 4. 技術方針（精査結果）
+## 4. サブスク仕様
 
-### 4.1 採用
+### 4.1 管理対象
 
-- フロント/サーバー: Next.js 15（App Router, TypeScript）
-- UI: Tailwind CSS + shadcn/ui
-- DB: PostgreSQL（Docker Composeでセルフホスト）
-- ORM: Prisma
-- バリデーション: Zod
-- グラフ: Recharts
-- テスト: Vitest（単体）+ Playwright（E2E）
+- 名称
+- 金額（円、整数）
+- 請求周期（monthly / yearly）
+- カテゴリ
+- 次回請求日
+- 有効/停止フラグ
+- プリセットキー（任意）
+- アイコン/色（任意）
+- メモ（任意）
 
-### 4.2 方針修正（重要）
+### 4.2 プリセット（日本円・税込目安）
 
-- **Supabaseは不採用**（今回「認証なし・セルフホストDB」が前提のため）
-- LMStudioは別VMのため、Next.js API Routeを中継して接続情報を秘匿する
+- 動画: Netflix, Amazon Prime, Disney+, Hulu, U-NEXT, DAZN, ABEMAプレミアム, dアニメストア
+- 音楽: Spotify, Apple Music, YouTube Premium, LINE MUSIC
+- クラウド: iCloud+, Google One, Microsoft 365, Dropbox Plus
+- ゲーム: Nintendo Switch Online, PS Plus, Xbox Game Pass
+- AI・開発: ChatGPT Plus, Claude Pro, GitHub Copilot, Adobe CC, Notion, 1Password
+- 生活: NHK受信料（地上/衛星）
 
-## 5. 機能仕様
+注記: プリセット金額は初期入力値。保存時はユーザーの最終入力を優先する。
 
-### 5.1 レシート/請求画像取り込み
+## 5. データモデル計画
 
-- 入力: JPEG/PNG/HEIC（上限サイズ設定あり）
-- 取得手段: スマホカメラ起動またはファイル選択
-- 保存: サーバー上の非公開ディレクトリ
-- 処理フロー:
-  1) 画像アップロード
-  2) サーバー側でLMStudioに送信
-  3) JSON形式で抽出結果を受け取り
-  4) UIで確認・修正
-  5) 確定保存
-
-### 5.2 抽出項目
-
-- 取引日
-- 店名/請求元
-- 合計金額
-- 税額（取得できる場合）
-- 明細メモ（任意）
-- 推定カテゴリ（AI）
-- 収支種別（支出/収入/不明）
-
-### 5.3 予算可視化
-
-- 入力:
-  - 月収
-  - 貯金目標額（または目標率）
-- 計算:
-  - 使用可能額 = 月収 - 貯金目標
-  - 残額 = 使用可能額 - 当月支出合計
-  - 使用率 = 当月支出合計 / 使用可能額 × 100
-- 表示:
-  - 使用率バー
-  - 残額表示
-  - カテゴリ別比率（円グラフ）
-
-## 6. データモデル（MVP）
-
-### categories
+### 5.1 subscriptions（新規）
 
 - id
 - name
-- type（expense / income）
-- is_default
-- created_at
-
-### transactions
-
-- id
-- tx_type（expense / income）
 - amount
-- tx_date
-- category_id
-- merchant_name
-- memo
-- receipt_id（nullable）
-- source（manual / ai）
-- created_at
-- updated_at
+- billingCycle
+- categoryId
+- nextBillingDate
+- isActive
+- presetKey（nullable）
+- icon（nullable）
+- color（nullable）
+- memo（nullable）
+- createdAt
+- updatedAt
 
-### receipts
+### 5.2 transactions（拡張）
 
-- id
-- file_path
-- ocr_raw_text
-- ai_result_json
-- status（uploaded / processed / confirmed / failed）
-- created_at
+- subscriptionId（nullable FK）
+- billingKey（nullable, 自動生成キー）
+- source の許容値へ `subscription` を追加
 
-### monthly_plans
+### 5.3 制約・インデックス
 
-- id
-- year_month（YYYY-MM）
-- monthly_income
-- saving_target_amount
-- saving_target_rate（nullable）
-- created_at
-- updated_at
+- `billingKey` をユニーク制約
+- `subscriptionId` にインデックス
+- `nextBillingDate` にインデックス（subscriptions）
 
-## 7. API設計（MVP）
+## 6. 自動引き落としアルゴリズム
 
-- POST /api/receipts/upload
-- POST /api/receipts/:id/extract
-- POST /api/receipts/:id/confirm
-- GET /api/transactions
-- POST /api/transactions
-- PATCH /api/transactions/:id
-- DELETE /api/transactions/:id
-- GET /api/monthly-plans/:yearMonth
-- PUT /api/monthly-plans/:yearMonth
-- GET /api/dashboard/:yearMonth
+1. 対象抽出: `isActive = true AND nextBillingDate <= today`
+2. 各サブスクごとに `billingKey = subscriptionId:YYYY-MM-DD` を計算
+3. トランザクションを作成（`source=subscription`）
+4. ユニーク制約違反時は「既処理」としてスキップ
+5. 作成成功時のみ `nextBillingDate` を更新
+   - monthly: +1 month
+   - yearly: +1 year
 
-※ すべてZodで入力検証し、異常系は統一エラーフォーマットで返却する。
+補足:
 
-## 8. セキュリティ設計（優先度高）
+- 全件を1トランザクションにせず、1サブスク1トランザクションで処理して失敗影響を局所化する。
+- APIは冪等を前提に、同日複数回実行されても結果が増えないようにする。
 
-1. LAN内限定公開（UFW + リバースプロキシ制限）
-2. LMStudio接続は内部ネットワーク優先、必要ならTLSトンネル
-3. 画像はpublic配下に置かず、API経由でのみアクセス
-4. 環境変数で機密情報管理（鍵・接続先）
-5. DBは最小権限ユーザーで接続
-6. Proxmoxホスト/VMディスク暗号化（LUKS）を推奨
-7. 監査ログ（アップロード/削除/AI抽出失敗）を記録
+## 7. API計画
 
-## 9. LMStudioモデル選定指針
+### 7.1 追加エンドポイント
 
-候補（Vision対応）:
+- `GET /api/subscriptions`
+- `POST /api/subscriptions`
+- `GET /api/subscriptions/[id]`
+- `PATCH /api/subscriptions/[id]`
+- `DELETE /api/subscriptions/[id]`（論理停止を優先）
+- `GET /api/subscriptions/presets`
+- `POST /api/subscriptions/process`
 
-- Gemma 3 12B（日本語バランス良）
-- Qwen2.5-VL 7B（軽量）
-- Qwen2.5-VL 32B（高精度・高VRAM）
+### 7.2 process レスポンス
 
-選定基準:
+- processedCount
+- skippedCount
+- updatedSubscriptionCount
+- errors
 
-1. 日本語OCR精度
-2. 明細の構造化JSON出力安定性
-3. 推論速度（体感待ち時間）
-4. VRAM消費
+### 7.3 ダッシュボード拡張
+
+- `GET /api/dashboard/[yearMonth]` の返却へ以下を追加
+  - monthlySubscriptionTotal
+  - upcomingSubscriptions
+
+## 8. バリデーション・共通定数
+
+- `src/lib/validations/subscription.ts` を追加
+- `src/lib/subscription-presets.ts` を追加
+- 金額は `0 < amount <= 10,000,000` の範囲で検証
+- 請求日・周期・カテゴリIDの整合性を検証
+
+## 9. UI/画面計画
+
+### 9.1 新規ページ
+
+- `/subscriptions` ページ
+  - アクティブ/停止タブ
+  - 一覧表示（名称、金額、周期、次回請求日）
+  - 停止/再開アクション
+
+### 9.2 登録導線
+
+- プリセット選択（カテゴリ別グリッド + 検索）
+- 追加/編集フォーム（名称、金額、周期、カテゴリ、次回請求日、メモ）
+
+### 9.3 既存画面への統合
+
+- ダッシュボードにサブスク合計カード
+- サイドバー/ボトムナビに `subscriptions` リンク
 
 ## 10. 実装フェーズ
 
-### Phase 1: 基盤構築（1週間）
+### Phase 1: DB・スキーマ・バリデーション
 
-- Next.js雛形作成
-- DB/Prisma設定、初期マイグレーション
-- transactions/categories/monthly_plans CRUD API
-- ダッシュボード基本計算
+- Prisma: `Subscription` モデル追加
+- Prisma: `Transaction` に `subscriptionId` / `billingKey` 追加
+- マイグレーション作成・適用
+- Zodとプリセット定義追加
 
-**完了条件:** 手入力のみで月次管理が成立
+完了条件:
 
-### Phase 2: 画像アップロード + AI連携（1週間）
+- DBマイグレーションが適用でき、基本CRUD入力をバリデーションできる
 
-- 画像アップロードAPI
-- LMStudio連携API（抽出・再試行）
-- 抽出結果確認/編集UI
-- receiptsとtransactionsの紐付け保存
+### Phase 2: API実装
 
-**完了条件:** 画像から登録まで一連フローが動作
+- `/api/subscriptions` 系CRUD
+- `/api/subscriptions/presets`
+- `/api/subscriptions/process`（冪等）
 
-### Phase 3: 可視化/UX改善（3〜5日）
+完了条件:
 
-- バー/円グラフ最適化
-- エラーメッセージ改善
-- カスタムカテゴリUI
-- 月切替と履歴表示
+- 手動実行で到来分のみ生成、重複が発生しない
 
-**完了条件:** 日常運用できるUI品質
+### Phase 3: ダッシュボード統合
 
-### Phase 4: テスト/運用準備（3〜5日）
+- ダッシュボード取得時に未処理分を軽量処理
+- サブスク合計・近日請求を返却
+- サマリーカード表示
 
-- 単体テスト（計算ロジック・バリデーション）
-- E2E（登録→集計→表示）
-- バックアップ手順・復旧手順の文書化
-- Readme.mdの作成、おすすめLLMや設定などを明記
+完了条件:
 
-**完了条件:** 安定運用可能な最小テストを通過
+- ダッシュボードでサブスク金額が月次集計に反映される
 
-## 11. 受け入れ基準（MVP）
+### Phase 4: 管理UI
 
-1. 画像アップロード後、1分以内に抽出結果が表示される
-2. 抽出結果を修正して保存できる
-3. 月収/貯金目標設定で使用可能額・残額・使用率が即時更新される
-4. 当月残額がマイナスの場合に警告表示される
-5. 主要導線（登録・編集・削除・月次表示）がE2Eで成功する
+- `/subscriptions` 一覧
+- プリセット選択UI
+- 追加/編集ダイアログ
+- 停止/再開操作
+
+完了条件:
+
+- 非エンジニア操作で登録〜停止まで完結できる
+
+### Phase 5: テスト・仕上げ
+
+- ユニット: 請求日更新ロジック、billingKey生成、バリデーション
+- API: process冪等性、停止中除外、年額更新
+- E2E: プリセット追加 → process → ダッシュボード反映
+
+完了条件:
+
+- 主要導線の回帰テストを通過
+
+## 11. 受け入れ基準
+
+1. サブスク作成後、`nextBillingDate` 到来日に1回だけ自動生成される
+2. 同日に `process` を複数回呼んでも重複しない
+3. 年額サブスクは次回請求日が1年進む
+4. 停止中サブスクは処理対象外
+5. ダッシュボードで月次サブスク合計を確認できる
+6. プリセットから3操作以内で新規登録できる
 
 ## 12. リスクと対策
 
-- OCR精度不足:
-  - 対策: 抽出結果は必ず編集可能にする、モデル比較を実施
-- LMStudio停止/遅延:
-  - 対策: タイムアウト・再試行・手動入力へのフォールバック
-- 認証なし運用の誤公開:
-  - 対策: LAN制限とリバースプロキシで外部公開を遮断
+- 高: 二重引き落とし
+  - 対策: `billingKey` ユニーク制約 + API冪等実装
+- 中: ダッシュボード表示遅延
+  - 対策: process処理件数上限、短タイムアウト、失敗時は集計を継続
+- 中: プリセット価格の陳腐化
+  - 対策: 「目安」表示を明示し、編集可能前提で運用
 
-## 13. 次の着手順（実装開始時）
+## 13. マイルストーン（目安）
 
-1. Next.js + Tailwind + shadcnの初期化
-2. Docker ComposeでPostgreSQL起動
-3. Prismaスキーマ作成・マイグレーション
-4. transactions / monthly_plans API実装
-5. ダッシュボードUI（バー/％）の先行実装
+- W1: Phase 1 完了
+- W2: Phase 2 完了
+- W3: Phase 3〜4 完了
+- W4: Phase 5 完了・リリース判定
+
+## 14. リリース判定
+
+- 受け入れ基準を満たす
+- 重大バグ（重複生成・請求日不整合）が0件
+- ダッシュボード応答性能が既存比で許容範囲内
 
 ---
 
-この計画書は、実装開始前の基準版（v1）とする。  
-実測したOCR精度・運用負荷に応じて、Phase 2完了時にv2へ改訂する。
+本計画は v2.0 の基準版とする。実装進捗と運用実測に応じて、Phase 3 完了時に v2.1 へ更新する。

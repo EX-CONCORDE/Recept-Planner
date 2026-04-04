@@ -16,11 +16,16 @@ export async function GET(_request: NextRequest, { params }: Params) {
   const end = new Date(year, month, 1);
   const daysInMonth = new Date(year, month, 0).getDate();
 
-  const [plan, transactions] = await Promise.all([
+  const [plan, transactions, activeSubscriptions] = await Promise.all([
     prisma.monthlyPlan.findUnique({ where: { yearMonth } }),
     prisma.transaction.findMany({
       where: { txDate: { gte: start, lt: end } },
       include: { category: true },
+    }),
+    prisma.subscription.findMany({
+      where: { isActive: true },
+      include: { category: true },
+      orderBy: { nextBillingDate: "asc" },
     }),
   ]);
 
@@ -134,6 +139,60 @@ export async function GET(_request: NextRequest, { params }: Params) {
     });
   }
 
+  // --- サブスクリプション集計 ---
+  // 月額換算合計（yearly は /12 で丸め）
+  const monthlySubscriptionTotal = activeSubscriptions.reduce((sum, sub) => {
+    return sum + (sub.billingCycle === "yearly" ? Math.round(sub.amount / 12) : sub.amount);
+  }, 0);
+
+  // 近日請求予定（次回請求日が近い順、最大5件）
+  const upcomingSubscriptions = activeSubscriptions.slice(0, 5).map((sub) => ({
+    id: sub.id,
+    name: sub.name,
+    amount: sub.amount,
+    billingCycle: sub.billingCycle,
+    nextBillingDate: sub.nextBillingDate,
+    categoryName: sub.category?.name ?? null,
+  }));
+
+  // --- ダッシュボード表示時にサブスク自動処理（軽量） ---
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dueSubscriptions = activeSubscriptions.filter(
+    (sub) => sub.nextBillingDate <= today,
+  );
+  for (const sub of dueSubscriptions) {
+    const billingDateStr = sub.nextBillingDate.toISOString().slice(0, 10);
+    const billingKey = `${sub.id}:${billingDateStr}`;
+    try {
+      await prisma.transaction.create({
+        data: {
+          txType: "expense",
+          amount: sub.amount,
+          txDate: sub.nextBillingDate,
+          categoryId: sub.categoryId,
+          merchantName: sub.name,
+          memo: "サブスク自動引き落とし",
+          source: "subscription",
+          subscriptionId: sub.id,
+          billingKey,
+        },
+      });
+      const nextDate = new Date(sub.nextBillingDate);
+      if (sub.billingCycle === "yearly") {
+        nextDate.setFullYear(nextDate.getFullYear() + 1);
+      } else {
+        nextDate.setMonth(nextDate.getMonth() + 1);
+      }
+      await prisma.subscription.update({
+        where: { id: sub.id },
+        data: { nextBillingDate: nextDate },
+      });
+    } catch {
+      // ユニーク制約違反 = 既処理、その他エラーも集計に影響させない
+    }
+  }
+
   return success({
     yearMonth,
     monthlyIncome,
@@ -154,5 +213,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
     recentTransactions: transactions.slice(0, 10),
     taxBreakdown,
     nextYearResidentTaxPrediction,
+    monthlySubscriptionTotal,
+    upcomingSubscriptions,
   });
 }

@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Receipt, ListPlus, Tag, Settings } from "lucide-react";
+import { LayoutDashboard, Receipt, ListPlus, RefreshCw, Tag, Settings } from "lucide-react";
 
 const navItems = [
   { href: "/", label: "ホーム", icon: LayoutDashboard },
   { href: "/expenses", label: "支出", icon: ListPlus },
   { href: "/upload", label: "撮影", icon: Receipt },
+  { href: "/subscriptions", label: "サブスク", icon: RefreshCw },
   { href: "/categories", label: "分類", icon: Tag },
   { href: "/settings", label: "設定", icon: Settings },
 ];
@@ -25,7 +26,7 @@ export function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1 text-xs transition-colors ${
+              className={`flex flex-col items-center gap-0.5 px-2 py-1 text-[10px] sm:text-xs transition-colors ${
                 isActive
                   ? "text-primary font-semibold"
                   : "text-muted-foreground"

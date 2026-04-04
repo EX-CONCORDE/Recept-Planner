@@ -8,6 +8,7 @@ import { DailyTrendChart } from "@/components/dashboard/daily-trend-chart";
 import { TaxBreakdownCard } from "@/components/dashboard/tax-breakdown";
 import { IncomeExpenseSummary } from "@/components/dashboard/income-expense-summary";
 import { SavingsTracker } from "@/components/savings/savings-tracker";
+import { SubscriptionSummary } from "@/components/dashboard/subscription-summary";
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { MonthSelector } from "@/components/layout/month-selector";
 import { Card, CardContent } from "@/components/ui/card";
@@ -77,6 +78,15 @@ interface DashboardData {
     merchantName: string | null;
     memo: string | null;
     category: { name: string } | null;
+  }[];
+  monthlySubscriptionTotal: number;
+  upcomingSubscriptions: {
+    id: number;
+    name: string;
+    amount: number;
+    billingCycle: string;
+    nextBillingDate: string;
+    categoryName: string | null;
   }[];
 }
 
@@ -156,6 +166,10 @@ export default function DashboardPage() {
                 daysInMonth={data.daysInMonth}
               />
               <SavingsTracker />
+              <SubscriptionSummary
+                monthlyTotal={data.monthlySubscriptionTotal}
+                upcoming={data.upcomingSubscriptions}
+              />
             </div>
 
             {/* 右カラム: 収支サマリー + 税金 + チャート + 取引 */}

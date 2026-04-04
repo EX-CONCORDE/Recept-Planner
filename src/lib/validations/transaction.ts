@@ -10,7 +10,7 @@ export const createTransactionSchema = z.object({
   merchantName: z.string().max(300).nullable().default(null),
   memo: z.string().max(500).nullable().default(null),
   receiptId: z.number().int().positive().nullable().default(null),
-  source: z.enum(["manual", "ai"]).default("manual"),
+  source: z.enum(["manual", "ai", "subscription"]).default("manual"),
 });
 
 export const updateTransactionSchema = createTransactionSchema.partial();

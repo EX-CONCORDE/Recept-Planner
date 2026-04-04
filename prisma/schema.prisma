@@ -14,29 +14,34 @@ model Category {
   isDefault Boolean  @default(false) @map("is_default")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  transactions Transaction[]
+  transactions  Transaction[]
+  subscriptions Subscription[]
 
   @@map("categories")
 }
 
 model Transaction {
-  id           Int       @id @default(autoincrement())
-  txType       String    @map("tx_type") @db.VarChar(20) // expense | income
-  amount       Int       // 日本円（整数）
-  txDate       DateTime  @map("tx_date") @db.Date
-  categoryId   Int?      @map("category_id")
-  merchantName String?   @map("merchant_name") @db.VarChar(300)
-  memo         String?   @db.VarChar(500)
-  receiptId    Int?      @map("receipt_id")
-  source       String    @default("manual") @db.VarChar(20) // manual | ai
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  id             Int       @id @default(autoincrement())
+  txType         String    @map("tx_type") @db.VarChar(20) // expense | income
+  amount         Int       // 日本円（整数）
+  txDate         DateTime  @map("tx_date") @db.Date
+  categoryId     Int?      @map("category_id")
+  merchantName   String?   @map("merchant_name") @db.VarChar(300)
+  memo           String?   @db.VarChar(500)
+  receiptId      Int?      @map("receipt_id")
+  source         String    @default("manual") @db.VarChar(20) // manual | ai | subscription
+  subscriptionId Int?      @map("subscription_id")
+  billingKey     String?   @unique @map("billing_key") @db.VarChar(100) // subscriptionId:YYYY-MM-DD
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
-  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  receipt  Receipt?  @relation(fields: [receiptId], references: [id], onDelete: SetNull)
+  category     Category?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  receipt      Receipt?      @relation(fields: [receiptId], references: [id], onDelete: SetNull)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
 
   @@index([txDate])
   @@index([categoryId])
+  @@index([subscriptionId])
   @@map("transactions")
 }
 
@@ -81,4 +86,27 @@ model SavingsGoal {
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   @@map("savings_goals")
+}
+
+model Subscription {
+  id              Int      @id @default(autoincrement())
+  name            String   @db.VarChar(200)
+  amount          Int      // 1回あたりの請求額（日本円）
+  billingCycle    String   @map("billing_cycle") @db.VarChar(10) // monthly | yearly
+  categoryId      Int?     @map("category_id")
+  nextBillingDate DateTime @map("next_billing_date") @db.Date
+  isActive        Boolean  @default(true) @map("is_active")
+  presetKey       String?  @map("preset_key") @db.VarChar(100)
+  icon            String?  @db.VarChar(50)
+  color           String?  @db.VarChar(20)
+  memo            String?  @db.VarChar(500)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  category     Category?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  transactions Transaction[]
+
+  @@index([nextBillingDate])
+  @@index([isActive])
+  @@map("subscriptions")
 }
