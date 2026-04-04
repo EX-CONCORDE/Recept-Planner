@@ -1,0 +1,59 @@
+$ NODE_EXtRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt node .next/standalone/server.js 
+▲ Next.js 16.2.2
+- Local:         http://localhost:3000
+- Network:       http://0.0.0.0:3000
+✓ Ready in 0ms
+[CF Access] JWT verification failed: TypeError: fetch failed
+    at async d (.next/server/chunks/_004v5j2._.js:1:1938)
+    at async h.reload (.next/server/chunks/_004v5j2._.js:1:4012)
+    at async h.getKey (.next/server/chunks/_004v5j2._.js:1:3447)
+    at async b (.next/server/chunks/_004v5j2._.js:1:5867)
+    at async A (.next/server/chunks/_004v5j2._.js:1:6801)
+    at async E (.next/server/chunks/_004v5j2._.js:1:6999)
+    at async C (.next/server/chunks/_004v5j2._.js:1:7516)
+    at async d (.next/server/chunks/_004v5j2._.js:1:8750) {
+  [cause]: Error: certificate has expired
+      at ignore-listed frames {
+    code: 'CERT_HAS_EXPIRED'
+  }
+}
+[auth][error] UntrustedHost: Host must be trusted. URL was: https://0.0.0.0:3000/api/auth/session. Read more at https://errors.authjs.dev#untrustedhost
+    at /opt/Recept-Planner/.next/standalone/.next/server/chunks/_0atzf~t._.js:404:52158
+    at r9 (/opt/Recept-Planner/.next/standalone/.next/server/chunks/_0atzf~t._.js:404:55120)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async rB.do (/opt/Recept-Planner/.next/standalone/node_modules/next/dist/compiled/next-server/app-route-turbo.runtime.prod.js:5:20926)
+[auth][error] UntrustedHost: Host must be trusted. URL was: https://0.0.0.0:3000/api/auth/session. Read more at https://errors.authjs.dev#untrustedhost
+    at /opt/Recept-Planner/.next/standalone/.next/server/chunks/_0atzf~t._.js:404:52158
+    at r9 (/opt/Recept-Planner/.next/standalone/.next/server/chunks/_0atzf~t._.js:404:55120)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async rB.do (/opt/Recept-Planner/.next/standalone/node_modules/next/dist/compiled/next-server/app-route-turbo.runtime.prod.js:5:20926)
+[auth][error] UntrustedHost: Host must be trusted. URL was: https://0.0.0.0:3000/api/auth/session. Read more at https://errors.authjs.dev#untrustedhost
+    at /opt/Recept-Planner/.next/standalone/.next/server/chunks/_0atzf~t._.js:404:52158
+    at r9 (/opt/Recept-Planner/.next/standalone/.next/server/chunks/_0atzf~t._.js:404:55120)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async rB.do (/opt/Recept-Planner/.next/standalone/node_modules/next/dist/compiled/next-server/app-route-turbo.runtime.prod.js:5:20926)
+[auth][error] UntrustedHost: Host must be trusted. URL was: https://0.0.0.0:3000/api/auth/session. Read more at https://errors.authjs.dev#untrustedhost
+    at /opt/Recept-Planner/.next/standalone/.next/server/chunks/_0atzf~t._.js:404:52158
+    at r9 (/opt/Recept-Planner/.next/standalone/.next/server/chunks/_0atzf~t._.js:404:55120)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async rB.do (/opt/Recept-Planner/.next/standalone/node_modules/next/dist/compiled/next-server/app-route-turbo.runtime.prod.js:5:20926)
+[auth][error] UntrustedHost: Host must be trusted. URL was: https://0.0.0.0:3000/api/auth/session. Read more at https://errors.authjs.dev#untrustedhost
+    at /opt/Recept-Planner/.next/standalone/.next/server/chunks/_0atzf~t._.js:404:52158
+    at r9 (/opt/Recept-Planner/.next/standalone/.next/server/chunks/_0atzf~t._.js:404:55120)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async rB.do (/opt/Recept-Planner/.next/standalone/node_modules/next/dist/compiled/next-server/app-route-turbo.runtime.prod.js:5:20926)
+[auth][error] UntrustedHost: Host must be trusted. URL was: https://0.0.0.0:3000/api/auth/session. Read more at https://errors.authjs.dev#untrustedhost
+    at /opt/Recept-Planner/.next/standalone/.next/server/chunks/_0atzf~t._.js:404:52158
+    at r9 (/opt/Recept-Planner/.next/standalone/.next/server/chunks/_0atzf~t._.js:404:55120)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async rB.do (/opt/Recept-Planner/.next/standalone/node_modules/next/dist/compiled/next-server/app-route-turbo.runtime.prod.js:5:20926)
+[auth][error] UntrustedHost: Host must be trusted. URL was: https://0.0.0.0:3000/api/auth/session. Read more at https://errors.authjs.dev#untrustedhost
+    at /opt/Recept-Planner/.next/standalone/.next/server/chunks/_0atzf~t._.js:404:52158
+    at r9 (/opt/Recept-Planner/.next/standalone/.next/server/chunks/_0atzf~t._.js:404:55120)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async rB.do (/opt/Recept-Planner/.next/standalone/node_modules/next/dist/compiled/next-server/app-route-turbo.runtime.prod.js:5:20926)
+[auth][error] UntrustedHost: Host must be trusted. URL was: https://0.0.0.0:3000/api/auth/session. Read more at https://errors.authjs.dev#untrustedhost
+    at /opt/Recept-Planner/.next/standalone/.next/server/chunks/_0atzf~t._.js:404:52158
+    at r9 (/opt/Recept-Planner/.next/standalone/.next/server/chunks/_0atzf~t._.js:404:55120)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async rB.do (/opt/Recept-Planner/.next/standalone/node_modules/next/dist/compiled/next-server/app-route-turbo.runtime.prod.js:5:20926)
