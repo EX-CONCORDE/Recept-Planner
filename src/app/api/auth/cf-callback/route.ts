@@ -4,10 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { verifyCfAccessJwt } from "@/lib/cf-access";
 import { createUserWithDefaults } from "@/lib/default-categories";
 
-/**
- * CF Tunnel 経由の場合 request.url が http://localhost:3000 になるため、
- * x-forwarded-host / x-forwarded-proto から実際のURLを復元する。
- */
 function getExternalUrl(request: NextRequest, path: string): URL {
   const forwardedHost = request.headers.get("x-forwarded-host");
   const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
@@ -24,7 +20,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(getExternalUrl(request, "/login"));
   }
 
-  // CF JWT 検証
   const payload = await verifyCfAccessJwt(cfToken);
   if (!payload) {
     return NextResponse.redirect(
@@ -32,7 +27,6 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // ユーザー検索 or 自動作成
   let user = await prisma.user.findUnique({
     where: { email: payload.email },
   });
@@ -50,7 +44,12 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Auth.js 互換の JWT トークンを生成
+  // HTTPS経由かどうかでCookie名を切り替え（Auth.jsの仕様に合わせる）
+  const isSecure = request.headers.get("x-forwarded-proto") === "https";
+  const cookieName = isSecure
+    ? "__Secure-authjs.session-token"
+    : "authjs.session-token";
+
   const secret = process.env.AUTH_SECRET!;
   const maxAge = payload.exp - Math.floor(Date.now() / 1000);
   const token = await encode({
@@ -62,20 +61,17 @@ export async function GET(request: NextRequest) {
       sub: String(user.id),
     },
     secret,
-    salt: "authjs.session-token",
+    salt: cookieName,
     maxAge,
   });
 
-  // リダイレクト先
   const callbackUrl =
     request.nextUrl.searchParams.get("callbackUrl") ?? "/";
   const response = NextResponse.redirect(
     getExternalUrl(request, callbackUrl),
   );
 
-  // Auth.js セッションクッキーをセット
-  const isSecure = request.headers.get("x-forwarded-proto") === "https";
-  response.cookies.set("authjs.session-token", token, {
+  response.cookies.set(cookieName, token, {
     httpOnly: true,
     secure: isSecure,
     sameSite: "lax",
