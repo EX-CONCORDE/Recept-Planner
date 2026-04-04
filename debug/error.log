@@ -1,19 +1,6 @@
-$ ./start.sh 
-▲ Next.js 16.2.2
-- Local:         http://localhost:3000
-- Network:       http://0.0.0.0:3000
-✓ Ready in 0ms
-[CF Access] JWT verification failed: TypeError: fetch failed
-    at async d (.next/server/chunks/_004v5j2._.js:1:1938)
-    at async h.reload (.next/server/chunks/_004v5j2._.js:1:4012)
-    at async h.getKey (.next/server/chunks/_004v5j2._.js:1:3447)
-    at async b (.next/server/chunks/_004v5j2._.js:1:5867)
-    at async A (.next/server/chunks/_004v5j2._.js:1:6801)
-    at async E (.next/server/chunks/_004v5j2._.js:1:6999)
-    at async C (.next/server/chunks/_004v5j2._.js:1:7516)
-    at async d (.next/server/chunks/_004v5j2._.js:1:8750) {
-  [cause]: Error: certificate has expired
-      at ignore-listed frames {
-    code: 'CERT_HAS_EXPIRED'
-  }
-}
+# JWKS の鍵の種類を確認
+  cat .next/standalone/data/cf-jwks.json | node -e "
+  const j=require('fs').readFileSync('/dev/stdin','utf-8');
+  const d=JSON.parse(j);
+  d.keys.forEach((k,i)=>console.log('Key',i,': kty='+k.kty, 'alg='+(k.alg||'none'), 'kid='+k.kid));
+  "
