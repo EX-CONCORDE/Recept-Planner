@@ -1,2 +1,9 @@
 source .env
-  curl -s "https://${CF_ACCESS_TEAM}.cloudflareaccess.com/cdn-cgi/access/certs" | head -c 500
+  curl -s "https://${CF_ACCESS_TEAM}.cloudflareaccess.com/cdn-cgi/access/certs" >
+  .next/standalone/data/cf-jwks.json
+  cat .next/standalone/data/cf-jwks.json | head -c 100
+
+  中身が表示されたら、そのまま ./start.sh ではなく直接起動してテスト:
+
+  set -a && source .env && set +a
+  node .next/standalone/server.js
