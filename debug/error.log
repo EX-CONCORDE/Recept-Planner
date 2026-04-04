@@ -1,26 +1,19 @@
-2つの問題がまだ残っています:
-
-  1. UntrustedHost — サーバーの .env に AUTH_TRUST_HOST=true が追加されていません。.env は gitignore
-  されているのでサーバー側で手動で追加が必要です。
-
-  2. CERT_HAS_EXPIRED — NODE_EXTRA_CA_CERTS がまだ効いていない。
-
-  サーバーで以下を実行してください:
-
-  # 1. AUTH_TRUST_HOST を .env に追加
-  echo 'AUTH_TRUST_HOST=true' >> /opt/Recept-Planner/.env
-
-  # 2. CA証明書ファイルが存在するか確認
-  ls -la /etc/ssl/certs/ca-certificates.crt
-
-  # 3. start.sh で環境変数が正しく読まれているか確認
-  cd /opt/Recept-Planner
-  set -a && source .env && set +a
-  export NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
-  echo "AUTH_TRUST_HOST=$AUTH_TRUST_HOST"
-  echo "AUTH_SECRET=$AUTH_SECRET"
-  echo "NODE_EXTRA_CA_CERTS=$NODE_EXTRA_CA_CERTS"
-  node -e "fetch('https://cloudflare.com').then(r=>console.log('OK',r.status)).catch(e=>console.error(
-  e.cause||e))"
-
-  全部OKなら ./start.sh で起動してください。まず UntrustedHost が消えるはずです。
+$ ./start.sh 
+▲ Next.js 16.2.2
+- Local:         http://localhost:3000
+- Network:       http://0.0.0.0:3000
+✓ Ready in 0ms
+[CF Access] JWT verification failed: TypeError: fetch failed
+    at async d (.next/server/chunks/_004v5j2._.js:1:1938)
+    at async h.reload (.next/server/chunks/_004v5j2._.js:1:4012)
+    at async h.getKey (.next/server/chunks/_004v5j2._.js:1:3447)
+    at async b (.next/server/chunks/_004v5j2._.js:1:5867)
+    at async A (.next/server/chunks/_004v5j2._.js:1:6801)
+    at async E (.next/server/chunks/_004v5j2._.js:1:6999)
+    at async C (.next/server/chunks/_004v5j2._.js:1:7516)
+    at async d (.next/server/chunks/_004v5j2._.js:1:8750) {
+  [cause]: Error: certificate has expired
+      at ignore-listed frames {
+    code: 'CERT_HAS_EXPIRED'
+  }
+}
