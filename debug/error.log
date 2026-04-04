@@ -1,9 +1,37 @@
-source .env
-  curl -s "https://${CF_ACCESS_TEAM}.cloudflareaccess.com/cdn-cgi/access/certs" >
-  .next/standalone/data/cf-jwks.json
-  cat .next/standalone/data/cf-jwks.json | head -c 100
-
-  中身が表示されたら、そのまま ./start.sh ではなく直接起動してテスト:
-
-  set -a && source .env && set +a
-  node .next/standalone/server.js
+$ ./start.sh 
+Downloading Cloudflare Access JWKS...
+JWKS downloaded successfully from https://msmtol.cloudflareaccess.com/cdn-cgi/access/certs
+▲ Next.js 16.2.2
+- Local:         http://localhost:3000
+- Network:       http://0.0.0.0:3000
+✓ Ready in 0ms
+[CF Access] === JWT Debug Info ===
+[CF Access] JWT header: kid= 81534d3b0d0a2a00cc3aea7c5acec3c45578b38649ddf271f0d4ed8e7a922804 alg= RS256
+[CF Access] JWT claims: iss= https://msmtol.cloudflareaccess.com aud= [ '4941086cad94c70c055c1246894e11e7264bf0727a35ddcac7a932c762f2c6e2' ] email= masumoto558@gmail.com
+[CF Access] JWT exp: 1775382659 iat: 1775296259
+[CF Access] Expected issuer: https://msmtol.cloudflareaccess.com
+[CF Access] Expected audience: 44e8dce1-94de-4506-9e75-e2717e34e54d
+[CF Access] Audience match: false
+[CF Access] JWKS file size: 5116 bytes
+[CF Access] JWKS key: kid= 81534d3b0d0a2a00cc3aea7c5acec3c45578b38649ddf271f0d4ed8e7a922804 alg= RS256 kty= RSA
+[CF Access] JWKS key: kid= 737fe412c30d5c3955e494dbe7671bcc1f1a5152776f372caa9789caa0a815e5 alg= RS256 kty= RSA
+[CF Access] JWT kid: 81534d3b0d0a2a00cc3aea7c5acec3c45578b38649ddf271f0d4ed8e7a922804
+[CF Access] JWKS kids: [
+  '81534d3b0d0a2a00cc3aea7c5acec3c45578b38649ddf271f0d4ed8e7a922804',
+  '737fe412c30d5c3955e494dbe7671bcc1f1a5152776f372caa9789caa0a815e5'
+]
+[CF Access] Kid match: true
+[CF Access] Trying key kid= 81534d3b0d0a2a00cc3aea7c5acec3c45578b38649ddf271f0d4ed8e7a922804
+[CF Access] Key kid= 81534d3b0d0a2a00cc3aea7c5acec3c45578b38649ddf271f0d4ed8e7a922804 failed: unexpected "aud" claim value
+[CF Access] Trying key kid= 737fe412c30d5c3955e494dbe7671bcc1f1a5152776f372caa9789caa0a815e5
+[CF Access] Key kid= 737fe412c30d5c3955e494dbe7671bcc1f1a5152776f372caa9789caa0a815e5 failed: signature verification failed
+[CF Access] All keys failed. Last error: Error: signature verification failed
+    at p (.next/server/chunks/[root-of-the-server]__0xczchv._.js:1:2401)
+    at async h (.next/server/chunks/[root-of-the-server]__0xczchv._.js:1:2960)
+    at async y (.next/server/chunks/[root-of-the-server]__0xczchv._.js:1:3158)
+    at async S (.next/server/chunks/[root-of-the-server]__0xczchv._.js:1:5401)
+    at async c (.next/server/chunks/[root-of-the-server]__0xczchv._.js:1:6303)
+    at async d (.next/server/chunks/[root-of-the-server]__0xczchv._.js:1:10602)
+    at async l (.next/server/chunks/[root-of-the-server]__0xczchv._.js:1:11643) {
+  code: 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED'
+}
