@@ -49,6 +49,8 @@ export async function GET(request: NextRequest) {
   const cookieName = isSecure
     ? "__Secure-authjs.session-token"
     : "authjs.session-token";
+  // Auth.js の salt はプレフィックスなしの名前（__Secure- を含まない）
+  const salt = "authjs.session-token";
 
   const secret = process.env.AUTH_SECRET!;
   const maxAge = payload.exp - Math.floor(Date.now() / 1000);
@@ -61,7 +63,7 @@ export async function GET(request: NextRequest) {
       sub: String(user.id),
     },
     secret,
-    salt: cookieName,
+    salt,
     maxAge,
   });
 
