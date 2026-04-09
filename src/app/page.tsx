@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { BudgetOverview } from "@/components/dashboard/budget-overview";
 import { CategoryChart } from "@/components/dashboard/category-chart";
-import { CategoryBarChart } from "@/components/dashboard/category-bar-chart";
 import { DailyTrendChart } from "@/components/dashboard/daily-trend-chart";
 import { TaxBreakdownCard } from "@/components/dashboard/tax-breakdown";
 import { IncomeExpenseSummary } from "@/components/dashboard/income-expense-summary";
@@ -158,6 +157,8 @@ export default function DashboardPage() {
                 remaining={data.remaining}
                 usageRate={data.usageRate}
                 isOverBudget={data.isOverBudget}
+                daysInMonth={data.daysInMonth}
+                yearMonth={data.yearMonth}
               />
               <DailyTrendChart
                 data={data.dailyTrend}
@@ -205,7 +206,6 @@ export default function DashboardPage() {
                 </Card>
               )}
               <CategoryChart data={data.byCategory} />
-              <CategoryBarChart data={data.byCategory} />
               <RecentTransactions transactions={data.recentTransactions} />
             </div>
           </div>

@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatYen } from "@/lib/format";
-import { AlertTriangle, PiggyBank, TrendingDown, Wallet } from "lucide-react";
+import { AlertTriangle, Clock, PiggyBank, TrendingDown, Wallet } from "lucide-react";
 
 interface BudgetOverviewProps {
   monthlyIncome: number;
@@ -13,6 +13,8 @@ interface BudgetOverviewProps {
   remaining: number;
   usageRate: number;
   isOverBudget: boolean;
+  daysInMonth: number;
+  yearMonth: string;
 }
 
 export function BudgetOverview({
@@ -24,11 +26,33 @@ export function BudgetOverview({
   remaining,
   usageRate,
   isOverBudget,
+  daysInMonth,
+  yearMonth,
 }: BudgetOverviewProps) {
   // 貯金切り崩し額（remaining < 0 の場合、貯金から食い込んでいる額）
   const savingsEaten = isOverBudget ? Math.abs(remaining) : 0;
   const savingsRemaining = savingTargetAmount - savingsEaten;
   const isSavingsCompromised = isOverBudget;
+
+  // 枯渇予測の計算
+  const [ymYear, ymMonth] = yearMonth.split("-").map(Number);
+  const now = new Date();
+  const isCurrentMonth =
+    now.getFullYear() === ymYear && now.getMonth() + 1 === ymMonth;
+  const elapsedDays = isCurrentMonth ? now.getDate() : daysInMonth;
+  const dailyAverage = elapsedDays > 0 ? totalExpenses / elapsedDays : 0;
+  const totalBudget = spendableAmount + buffer;
+
+  let depletionDay: number | null = null;
+  if (dailyAverage > 0 && !isOverBudget && isCurrentMonth && totalBudget > 0) {
+    const daysUntilDepletion = Math.floor(remaining / dailyAverage);
+    const depletionDate = new Date(now);
+    depletionDate.setDate(depletionDate.getDate() + daysUntilDepletion);
+    // 月内に枯渇する場合のみ表示
+    if (depletionDate.getMonth() + 1 === ymMonth && depletionDate.getFullYear() === ymYear) {
+      depletionDay = depletionDate.getDate();
+    }
+  }
 
   const progressColor = isOverBudget
     ? "bg-red-500"
@@ -103,6 +127,17 @@ export function BudgetOverview({
               )}
             </div>
           </div>
+
+          {/* 枯渇予測 */}
+          {depletionDay && (
+            <div className="flex items-center gap-1.5 text-xs text-orange-600 dark:text-orange-400">
+              <Clock className="h-3.5 w-3.5 shrink-0" />
+              <span>
+                このペースだと <span className="font-bold">{ymMonth}月{depletionDay}日</span> に予算が枯渇します
+                （日平均 {formatYen(Math.round(dailyAverage))}）
+              </span>
+            </div>
+          )}
 
           {/* 残額表示 */}
           <div

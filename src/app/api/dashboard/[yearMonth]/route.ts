@@ -210,7 +210,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
     dailyTrend,
     idealDailyBudget,
     daysInMonth,
-    recentTransactions: transactions.slice(0, 10),
+    recentTransactions: [...transactions].sort((a, b) => new Date(b.txDate).getTime() - new Date(a.txDate).getTime()).slice(0, 10),
     taxBreakdown,
     nextYearResidentTaxPrediction,
     monthlySubscriptionTotal,
