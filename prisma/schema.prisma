@@ -132,10 +132,11 @@ model AssistantMessage {
 
 model FinancialAdvice {
   id        Int      @id @default(autoincrement())
-  yearMonth String?  @map("year_month") @db.VarChar(7)
+  yearMonth String   @map("year_month") @db.VarChar(7)
   content   String
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
+  @@index([yearMonth])
   @@index([createdAt])
   @@map("financial_advice")
 }

@@ -85,6 +85,39 @@ function summarizeMerchants(transactions: TransactionWithCategory[]) {
     .map(([merchantName, value]) => ({ merchantName, ...value }));
 }
 
+function summarizeTargetMonth(
+  transactions: TransactionWithCategory[],
+  yearMonth: string,
+) {
+  const monthTransactions = transactions.filter(
+    (tx) => monthKey(tx.txDate) === yearMonth,
+  );
+  const income = monthTransactions
+    .filter((tx) => tx.txType === "income")
+    .reduce((sum, tx) => sum + tx.amount, 0);
+  const expenses = monthTransactions
+    .filter((tx) => tx.txType === "expense")
+    .reduce((sum, tx) => sum + tx.amount, 0);
+
+  return {
+    yearMonth,
+    income,
+    expenses,
+    balance: income - expenses,
+    topCategories: summarizeMonths(monthTransactions)[0]?.topCategories ?? [],
+    transactions: monthTransactions.map((tx) => ({
+      id: tx.id,
+      date: formatDateKey(tx.txDate),
+      type: tx.txType,
+      amount: tx.amount,
+      category: tx.category?.name ?? null,
+      merchant: tx.merchantName,
+      memo: tx.memo,
+      source: tx.source,
+    })),
+  };
+}
+
 export async function buildFinancialContext(yearMonth = getCurrentYearMonth()) {
   const [
     transactionCount,
@@ -119,6 +152,7 @@ export async function buildFinancialContext(yearMonth = getCurrentYearMonth()) {
       orderBy: { createdAt: "desc" },
     }),
     prisma.financialAdvice.findFirst({
+      where: { yearMonth },
       orderBy: { createdAt: "desc" },
     }),
   ]);
@@ -141,6 +175,7 @@ export async function buildFinancialContext(yearMonth = getCurrentYearMonth()) {
       autoCalcTax: plan.autoCalcTax,
       prefecture: plan.prefecture,
     })),
+    targetMonth: summarizeTargetMonth(allTransactions, yearMonth),
     monthlySummaries: summarizeMonths(allTransactions),
     topMerchants: summarizeMerchants(allTransactions),
     recentTransactions: recentTransactions.map((tx) => ({

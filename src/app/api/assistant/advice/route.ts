@@ -7,9 +7,15 @@ import {
   buildFinancialContext,
 } from "@/lib/assistant-context";
 import { adviceRequestSchema } from "@/lib/validations/assistant";
+import { yearMonthSchema } from "@/lib/validations/monthly-plan";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const yearMonth = request.nextUrl.searchParams.get("yearMonth");
+  const parsed = yearMonthSchema.safeParse(yearMonth);
+  if (!parsed.success) return error("YYYY-MM形式で指定してください");
+
   const advice = await prisma.financialAdvice.findFirst({
+    where: { yearMonth: parsed.data },
     orderBy: { createdAt: "desc" },
   });
 
@@ -34,6 +40,7 @@ export async function POST(request: NextRequest) {
   }
 
   const yearMonth = parsed.data.yearMonth;
+  if (!yearMonth) return error("YYYY-MM形式で指定してください");
   const financialContext = await buildFinancialContext(yearMonth);
 
   try {
@@ -54,11 +61,14 @@ export async function POST(request: NextRequest) {
       maxOutputTokens: 1800,
     });
 
-    const advice = await prisma.financialAdvice.create({
-      data: {
-        yearMonth,
-        content,
-      },
+    const advice = await prisma.$transaction(async (tx) => {
+      await tx.financialAdvice.deleteMany({
+        where: { yearMonth },
+      });
+
+      return tx.financialAdvice.create({
+        data: { yearMonth, content },
+      });
     });
 
     return success({

@@ -8,7 +8,7 @@ import { Bot, Loader2, Sparkles } from "lucide-react";
 
 interface Advice {
   id: number;
-  yearMonth: string | null;
+  yearMonth: string;
   content: string;
   createdAt: string;
 }
@@ -25,15 +25,17 @@ export function FinancialAdvice({ yearMonth }: FinancialAdviceProps) {
   useEffect(() => {
     async function loadAdvice() {
       setLoading(true);
-      const res = await fetch("/api/assistant/advice");
+      const res = await fetch(`/api/assistant/advice?yearMonth=${yearMonth}`);
       const json = await res.json();
       if (json.success) {
         setAdvice(json.data);
+      } else {
+        setAdvice(null);
       }
       setLoading(false);
     }
     loadAdvice();
-  }, []);
+  }, [yearMonth]);
 
   async function handleGenerate() {
     setGenerating(true);
@@ -58,7 +60,7 @@ export function FinancialAdvice({ yearMonth }: FinancialAdviceProps) {
         <div className="flex items-center justify-between gap-3">
           <CardTitle className="text-lg flex items-center gap-2">
             <Bot className="h-5 w-5" />
-            アドバイス
+            {yearMonth.replace("-", "年")}月のアドバイス
           </CardTitle>
           <Button
             size="sm"

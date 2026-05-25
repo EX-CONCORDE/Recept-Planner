@@ -245,7 +245,7 @@ sudo systemctl status recept-planner
 
 Gemini APIキー、モデル、API URL、画像縮小設定はアプリの `/settings` 画面から保存できます。保存先はPostgreSQLの `app_settings` テーブルです。環境変数は初期値・フォールバックとしてのみ使います。
 
-レシート読み取り、家計アシスタント、AIアドバイスはすべて同じGemini設定を使います。会話履歴は `assistant_messages`、保存済みアドバイスは `financial_advice` に保存されます。チャットからDBを変更できる操作はアプリ側で許可したものだけに制限しており、現在は支出/収入の追加に対応しています。
+レシート読み取り、家計アシスタント、AIアドバイスはすべて同じGemini設定を使います。会話履歴は `assistant_messages`、保存済みアドバイスは `financial_advice` に月別で保存されます。チャットからDBを変更できる操作はアプリ側で許可したものだけに制限しており、現在は支出/収入の追加に対応しています。
 
 ## セキュリティ
 
