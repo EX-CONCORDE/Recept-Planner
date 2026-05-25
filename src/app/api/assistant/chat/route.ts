@@ -6,6 +6,11 @@ import {
   buildAssistantSystemInstruction,
   buildFinancialContext,
 } from "@/lib/assistant-context";
+import {
+  executeAssistantAction,
+  extractAssistantAction,
+  mayRequestAssistantAction,
+} from "@/lib/assistant-actions";
 import { assistantChatSchema } from "@/lib/validations/assistant";
 
 const HISTORY_LIMIT = 24;
@@ -50,6 +55,31 @@ export async function POST(request: NextRequest) {
       content: parsed.data.message,
     },
   });
+
+  if (mayRequestAssistantAction(parsed.data.message)) {
+    try {
+      const action = await extractAssistantAction(parsed.data.message);
+      const result = await executeAssistantAction(action);
+
+      if (result.handled) {
+        const saved = await prisma.assistantMessage.create({
+          data: {
+            role: "assistant",
+            content: result.reply,
+          },
+        });
+
+        return success({
+          id: saved.id,
+          role: saved.role,
+          content: saved.content,
+          createdAt: saved.createdAt,
+        });
+      }
+    } catch {
+      // 操作抽出に失敗した場合は通常の会話応答にフォールバックする
+    }
+  }
 
   const [historyDesc, financialContext] = await Promise.all([
     prisma.assistantMessage.findMany({
