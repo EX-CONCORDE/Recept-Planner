@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { TaxBreakdownCard } from "@/components/dashboard/tax-breakdown";
 import { getCurrentYearMonth, formatYen } from "@/lib/format";
 import { toast } from "sonner";
-import { Calculator } from "lucide-react";
+import { Bot, Calculator } from "lucide-react";
 
 interface TaxBreakdown {
   grossMonthly: number;
@@ -29,6 +29,16 @@ interface TaxBreakdown {
   netRate: number;
 }
 
+interface GeminiSettings {
+  apiKeyConfigured: boolean;
+  apiKeyPreview: string | null;
+  apiKeySource: "database" | "environment" | "none";
+  model: string;
+  apiBaseUrl: string;
+  receiptImageMaxDimension: number;
+  receiptImageJpegQuality: number;
+}
+
 export default function SettingsPage() {
   const [yearMonth, setYearMonth] = useState(getCurrentYearMonth);
   const [autoCalcTax, setAutoCalcTax] = useState(false);
@@ -41,6 +51,19 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [prefectures, setPrefectures] = useState<string[]>([]);
   const [taxBreakdown, setTaxBreakdown] = useState<TaxBreakdown | null>(null);
+  const [geminiSettings, setGeminiSettings] = useState<GeminiSettings | null>(
+    null,
+  );
+  const [geminiApiKey, setGeminiApiKey] = useState("");
+  const [clearGeminiApiKey, setClearGeminiApiKey] = useState(false);
+  const [geminiModel, setGeminiModel] = useState("gemini-2.5-flash-lite");
+  const [geminiApiBaseUrl, setGeminiApiBaseUrl] = useState(
+    "https://generativelanguage.googleapis.com/v1beta",
+  );
+  const [receiptImageMaxDimension, setReceiptImageMaxDimension] =
+    useState("1024");
+  const [receiptImageJpegQuality, setReceiptImageJpegQuality] = useState("80");
+  const [savingGemini, setSavingGemini] = useState(false);
 
   // 都道府県リスト取得
   useEffect(() => {
@@ -49,6 +72,22 @@ export default function SettingsPage() {
       .then((json) => {
         if (json.success) setPrefectures(json.data.prefectures);
       });
+  }, []);
+
+  useEffect(() => {
+    async function loadGeminiSettings() {
+      const res = await fetch("/api/settings/gemini");
+      const json = await res.json();
+      if (json.success) {
+        const d = json.data as GeminiSettings;
+        setGeminiSettings(d);
+        setGeminiModel(d.model);
+        setGeminiApiBaseUrl(d.apiBaseUrl);
+        setReceiptImageMaxDimension(String(d.receiptImageMaxDimension));
+        setReceiptImageJpegQuality(String(d.receiptImageJpegQuality));
+      }
+    }
+    loadGeminiSettings();
   }, []);
 
   // 月次プラン読み込み
@@ -132,9 +171,141 @@ export default function SettingsPage() {
     setSaving(false);
   }
 
+  async function handleSaveGemini() {
+    setSavingGemini(true);
+    const apiKey = geminiApiKey.trim();
+    const res = await fetch("/api/settings/gemini", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        apiKey: clearGeminiApiKey || !apiKey ? undefined : apiKey,
+        clearApiKey: clearGeminiApiKey,
+        model: geminiModel.trim(),
+        apiBaseUrl: geminiApiBaseUrl.trim(),
+        receiptImageMaxDimension: Number(receiptImageMaxDimension),
+        receiptImageJpegQuality: Number(receiptImageJpegQuality),
+      }),
+    });
+    const json = await res.json();
+    if (json.success) {
+      const d = json.data as GeminiSettings;
+      setGeminiSettings(d);
+      setGeminiApiKey("");
+      setClearGeminiApiKey(false);
+      setGeminiModel(d.model);
+      setGeminiApiBaseUrl(d.apiBaseUrl);
+      setReceiptImageMaxDimension(String(d.receiptImageMaxDimension));
+      setReceiptImageJpegQuality(String(d.receiptImageJpegQuality));
+      toast.success("Gemini設定を保存しました");
+    } else {
+      toast.error(json.error || "Gemini設定の保存に失敗しました");
+    }
+    setSavingGemini(false);
+  }
+
   return (
     <div className="space-y-4 max-w-2xl">
-      <h1 className="text-xl font-bold">月次設定</h1>
+      <h1 className="text-xl font-bold">設定</h1>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Bot className="h-5 w-5" />
+            Gemini API
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="space-y-1">
+            <Label htmlFor="gemini-api-key">APIキー</Label>
+            <Input
+              id="gemini-api-key"
+              type="password"
+              placeholder={
+                geminiSettings?.apiKeyConfigured
+                  ? "保存済みのキーを維持"
+                  : "AIza..."
+              }
+              value={geminiApiKey}
+              disabled={clearGeminiApiKey}
+              onChange={(e) => setGeminiApiKey(e.target.value)}
+            />
+            <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+              <span>
+                {geminiSettings?.apiKeyConfigured
+                  ? `設定済み ${geminiSettings.apiKeyPreview ?? ""}`
+                  : "未設定"}
+                {geminiSettings?.apiKeySource === "environment" && " / 環境変数"}
+                {geminiSettings?.apiKeySource === "database" && " / DB保存"}
+              </span>
+              <label className="flex items-center gap-1.5">
+                <input
+                  type="checkbox"
+                  checked={clearGeminiApiKey}
+                  onChange={(e) => setClearGeminiApiKey(e.target.checked)}
+                />
+                クリア
+              </label>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="gemini-model">モデル</Label>
+            <Input
+              id="gemini-model"
+              value={geminiModel}
+              onChange={(e) => setGeminiModel(e.target.value)}
+              list="gemini-models"
+            />
+            <datalist id="gemini-models">
+              <option value="gemini-2.5-flash-lite" />
+              <option value="gemini-2.5-flash" />
+              <option value="gemini-2.5-pro" />
+            </datalist>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="gemini-api-base-url">API URL</Label>
+            <Input
+              id="gemini-api-base-url"
+              value={geminiApiBaseUrl}
+              onChange={(e) => setGeminiApiBaseUrl(e.target.value)}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="receipt-image-size">画像サイズ</Label>
+              <Input
+                id="receipt-image-size"
+                type="number"
+                min={256}
+                max={2048}
+                value={receiptImageMaxDimension}
+                onChange={(e) => setReceiptImageMaxDimension(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="receipt-image-quality">JPEG品質</Label>
+              <Input
+                id="receipt-image-quality"
+                type="number"
+                min={1}
+                max={100}
+                value={receiptImageJpegQuality}
+                onChange={(e) => setReceiptImageJpegQuality(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <Button
+            onClick={handleSaveGemini}
+            disabled={savingGemini}
+            className="w-full"
+          >
+            {savingGemini ? "保存中..." : "Gemini設定を保存"}
+          </Button>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="pb-3">

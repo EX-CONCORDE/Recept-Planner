@@ -3,6 +3,7 @@ import { Noto_Sans_JP } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
+import { AssistantWidget } from "@/components/assistant/assistant-widget";
 import "./globals.css";
 
 const notoSansJP = Noto_Sans_JP({
@@ -42,6 +43,7 @@ export default function RootLayout({
         </div>
 
         <Toaster position="top-center" />
+        <AssistantWidget />
       </body>
     </html>
   );

@@ -6,9 +6,12 @@ services:
       - "3000:3000"
     environment:
       - DATABASE_URL=postgresql://recept:${POSTGRES_PASSWORD}@db:5432/recept_planner
-      - LMSTUDIO_BASE_URL=${LMSTUDIO_BASE_URL}
-      - LMSTUDIO_MODEL=${LMSTUDIO_MODEL:-gemma-3-12b}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash-lite}
+      - GEMINI_API_BASE_URL=${GEMINI_API_BASE_URL:-https://generativelanguage.googleapis.com/v1beta}
       - RECEIPT_STORAGE_PATH=/app/data/receipts
+      - RECEIPT_IMAGE_MAX_DIMENSION=${RECEIPT_IMAGE_MAX_DIMENSION:-1024}
+      - RECEIPT_IMAGE_JPEG_QUALITY=${RECEIPT_IMAGE_JPEG_QUALITY:-80}
     volumes:
       - receipt_data:/app/data/receipts
     depends_on:

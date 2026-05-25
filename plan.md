@@ -12,7 +12,7 @@
 - 対象: 個人利用（認証なし）
 - UI言語: 日本語のみ
 - 技術: Next.js App Router + TypeScript + Prisma + PostgreSQL + Zod
-- OCR/抽出: LMStudio連携（既存機能）
+- OCR/抽出: Gemini API連携
 - 追加方針: 既存データモデルとUIを壊さず、段階的にサブスク機能を拡張
 
 ## 3. スコープ

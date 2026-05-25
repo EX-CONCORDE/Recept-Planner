@@ -1,14 +1,16 @@
-import sharp from "sharp";
 import { readFile } from "node:fs/promises";
-
-const MAX_DIMENSION = 1024;
-const JPEG_QUALITY = 80;
+import sharp from "sharp";
+import { getGeminiSettings } from "@/lib/gemini-settings";
 
 export async function resizeAndEncode(filePath: string): Promise<string> {
+  const settings = await getGeminiSettings();
   const buffer = await readFile(filePath);
   const resized = await sharp(buffer)
-    .resize(MAX_DIMENSION, MAX_DIMENSION, { fit: "inside", withoutEnlargement: true })
-    .jpeg({ quality: JPEG_QUALITY })
+    .resize(settings.receiptImageMaxDimension, settings.receiptImageMaxDimension, {
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .jpeg({ quality: settings.receiptImageJpegQuality })
     .toBuffer();
   return resized.toString("base64");
 }

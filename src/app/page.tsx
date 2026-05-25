@@ -6,6 +6,7 @@ import { CategoryChart } from "@/components/dashboard/category-chart";
 import { DailyTrendChart } from "@/components/dashboard/daily-trend-chart";
 import { TaxBreakdownCard } from "@/components/dashboard/tax-breakdown";
 import { IncomeExpenseSummary } from "@/components/dashboard/income-expense-summary";
+import { FinancialAdvice } from "@/components/dashboard/financial-advice";
 import { SavingsTracker } from "@/components/savings/savings-tracker";
 import { SubscriptionSummary } from "@/components/dashboard/subscription-summary";
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
@@ -182,6 +183,7 @@ export default function DashboardPage() {
                 byCategory={data.byCategory}
                 incomeByCategory={data.incomeByCategory}
               />
+              <FinancialAdvice yearMonth={data.yearMonth} />
               {data.taxBreakdown && (
                 <TaxBreakdownCard data={data.taxBreakdown} />
               )}

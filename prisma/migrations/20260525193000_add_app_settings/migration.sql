@@ -1,0 +1,9 @@
+-- CreateTable
+CREATE TABLE "app_settings" (
+    "key" VARCHAR(100) NOT NULL,
+    "value" TEXT NOT NULL,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ NOT NULL,
+
+    CONSTRAINT "app_settings_pkey" PRIMARY KEY ("key")
+);

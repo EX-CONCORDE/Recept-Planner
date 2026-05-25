@@ -110,3 +110,32 @@ model Subscription {
   @@index([isActive])
   @@map("subscriptions")
 }
+
+model AppSetting {
+  key       String   @id @db.VarChar(100)
+  value     String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("app_settings")
+}
+
+model AssistantMessage {
+  id        Int      @id @default(autoincrement())
+  role      String   @db.VarChar(20) // user | assistant
+  content   String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([createdAt])
+  @@map("assistant_messages")
+}
+
+model FinancialAdvice {
+  id        Int      @id @default(autoincrement())
+  yearMonth String?  @map("year_month") @db.VarChar(7)
+  content   String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([createdAt])
+  @@map("financial_advice")
+}

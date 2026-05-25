@@ -4,7 +4,10 @@
 
 ## 機能
 
-- **レシートAI読み取り**: カメラ撮影/画像アップロード → LMStudio Vision LLMで金額・店名・カテゴリを自動抽出
+- **レシートAI読み取り**: カメラ撮影/画像アップロード → Gemini APIで金額・店名・カテゴリを自動抽出
+- **Gemini設定GUI**: APIキー・モデル・画像縮小設定をブラウザから保存
+- **家計アシスタント**: Geminiと会話し、記録済みの購入履歴・金額・サブスク・貯金状況を確認
+- **AIアドバイス**: 現在の支出傾向から改善案を作成し、次回更新まで保存表示
 - **収支管理ダッシュボード**: 月次の予算バー、カテゴリ別円グラフ/棒グラフ、日別支出トレンド
 - **税金自動計算**: 額面月収から社会保険料・所得税・住民税を2026年度税率で自動控除
   - 47都道府県別の健康保険料率・住民税超過課税に対応
@@ -15,10 +18,10 @@
 
 ## 技術スタック
 
-- **フロント**: Next.js 15 (App Router) + TypeScript + Tailwind CSS + shadcn/ui + Recharts
+- **フロント**: Next.js 16 (App Router) + TypeScript + Tailwind CSS + shadcn/ui + Recharts
 - **DB**: PostgreSQL 16 (Docker)
 - **ORM**: Prisma v7
-- **AI**: LMStudio (Vision対応LLM、別サーバー)
+- **AI**: Gemini API (Vision対応モデル)
 
 ## セットアップ
 
@@ -26,7 +29,7 @@
 
 - Node.js 22+
 - Docker & Docker Compose
-- （AI機能を使う場合）LMStudioが稼働しているサーバー
+- （AI機能を使う場合）Gemini APIキー
 
 ### 1. リポジトリをクローン
 
@@ -47,20 +50,23 @@ cp .env.example .env
 # PostgreSQLのパスワードを安全な値に変更
 DATABASE_URL="postgresql://recept:YOUR_SECURE_PASSWORD@localhost:5432/recept_planner"
 
-# LMStudioサーバーのアドレス（AI機能を使う場合）
-LMSTUDIO_BASE_URL="http://192.168.1.x:1234"
-LMSTUDIO_MODEL="gemma-3-12b"
+# Gemini API（初回起動後、設定画面からも保存できます）
+GEMINI_API_KEY=""
+GEMINI_MODEL="gemini-2.5-flash-lite"
 
 # レシート画像の保存先
 RECEIPT_STORAGE_PATH="./data/receipts"
+
+# Geminiへ送る前の画像縮小設定（節約したい場合は 768 などに下げる）
+RECEIPT_IMAGE_MAX_DIMENSION="1024"
+RECEIPT_IMAGE_JPEG_QUALITY="80"
 ```
 
 ### 3A. Docker Compose で本番デプロイ（推奨）
 
 ```bash
-# .envにPOSTGRES_PASSWORDとLMSTUDIO_BASE_URLを設定
+# .envにPOSTGRES_PASSWORDを設定
 export POSTGRES_PASSWORD=your_secure_password
-export LMSTUDIO_BASE_URL=http://192.168.1.x:1234
 
 docker compose -f docker-compose.prod.yml up -d
 ```
@@ -135,15 +141,13 @@ cd Recept-Planner
 cp .env.example .env
 nano .env
 # → DATABASE_URL のパスワードを変更
-# → LMSTUDIO_BASE_URL をLMStudioサーバーのIPに設定
-# → LMSTUDIO_MODEL を使用するモデル名に設定
+# → Gemini APIキーやモデルは起動後に /settings から設定可能
 ```
 
 ### 3A. Docker で起動（推奨）
 
 ```bash
 export POSTGRES_PASSWORD=your_secure_password
-export LMSTUDIO_BASE_URL=http://192.168.x.x:1234
 
 # ビルド＆起動
 docker compose -f docker-compose.prod.yml up -d --build
@@ -222,20 +226,26 @@ sudo systemctl status recept-planner
 │                                   │
 │   [Next.js App]  ←→  [PostgreSQL] │
 │        │                          │
-│        │ HTTP (内部ネットワーク)     │
+│        │ HTTPS                    │
 │        ▼                          │
-│   [LMStudio VM]                   │
-│   (Vision LLM)                    │
+│   [Gemini API]                    │
+│   (Vision model)                  │
 └───────────────────────────────────┘
 ```
 
-## 推奨LLMモデル（LMStudio用）
+## Geminiモデル設定
 
-| モデル | VRAM目安 | 日本語OCR | 推奨度 |
-|--------|---------|----------|--------|
-| Gemma 3 12B | ~8GB (Q4) | 優秀 | **最推奨** |
-| Qwen2.5-VL 7B | ~6GB (Q4) | 優秀 | 推奨 |
-| Qwen2.5-VL 32B | ~20GB (Q4) | 非常に優秀 | VRAM十分なら |
+| モデル | 用途 | コスト感 |
+|--------|------|----------|
+| `gemini-2.5-flash-lite` | レシート読み取りの初期値 | 低コスト |
+| `gemini-2.5-flash` | 精度と速度のバランス重視 | 中 |
+| `gemini-2.5-pro` | 読み取り精度を優先する場合 | 高 |
+
+写真取り込みはアップロード画像をサーバー側で最大1024pxに縮小してからGeminiへ送るため、元画像をそのまま投げるより入力トークンを抑えます。コストをさらに抑える場合は `GEMINI_MODEL=gemini-2.5-flash-lite` のまま使い、`RECEIPT_IMAGE_MAX_DIMENSION=768` などに下げてください。
+
+Gemini APIキー、モデル、API URL、画像縮小設定はアプリの `/settings` 画面から保存できます。保存先はPostgreSQLの `app_settings` テーブルです。環境変数は初期値・フォールバックとしてのみ使います。
+
+レシート読み取り、家計アシスタント、AIアドバイスはすべて同じGemini設定を使います。会話履歴は `assistant_messages`、保存済みアドバイスは `financial_advice` に保存されます。
 
 ## セキュリティ
 
