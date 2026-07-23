@@ -21,6 +21,7 @@ interface DashboardData {
   monthlyIncome: number;
   savingTargetAmount: number;
   spendableAmount: number;
+  totalBudget: number;
   totalExpenses: number;
   totalIncome: number;
   buffer: number;
@@ -154,6 +155,7 @@ export default function DashboardPage() {
                 monthlyIncome={data.monthlyIncome}
                 savingTargetAmount={data.savingTargetAmount}
                 spendableAmount={data.spendableAmount}
+                totalBudget={data.totalBudget}
                 totalExpenses={data.totalExpenses}
                 buffer={data.buffer}
                 directIncome={data.directIncome}
@@ -166,7 +168,7 @@ export default function DashboardPage() {
               <DailyTrendChart
                 data={data.dailyTrend}
                 idealDailyBudget={data.idealDailyBudget}
-                spendableAmount={data.spendableAmount}
+                totalBudget={data.totalBudget}
                 daysInMonth={data.daysInMonth}
               />
               <SavingsTracker />

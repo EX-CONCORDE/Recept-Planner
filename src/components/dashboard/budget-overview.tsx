@@ -8,6 +8,7 @@ interface BudgetOverviewProps {
   monthlyIncome: number;
   savingTargetAmount: number;
   spendableAmount: number;
+  totalBudget: number;
   totalExpenses: number;
   buffer: number;
   directIncome: number;
@@ -22,6 +23,7 @@ export function BudgetOverview({
   monthlyIncome,
   savingTargetAmount,
   spendableAmount,
+  totalBudget,
   totalExpenses,
   buffer,
   directIncome,
@@ -43,7 +45,6 @@ export function BudgetOverview({
     now.getFullYear() === ymYear && now.getMonth() + 1 === ymMonth;
   const elapsedDays = isCurrentMonth ? now.getDate() : daysInMonth;
   const dailyAverage = elapsedDays > 0 ? totalExpenses / elapsedDays : 0;
-  const totalBudget = spendableAmount + buffer + directIncome;
 
   let depletionDay: number | null = null;
   if (dailyAverage > 0 && !isOverBudget && isCurrentMonth && totalBudget > 0) {

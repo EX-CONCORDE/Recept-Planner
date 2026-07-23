@@ -47,10 +47,12 @@ export async function GET(_request: NextRequest, { params }: Params) {
 
   const spendableAmount = monthlyIncome - savingTargetAmount;
   const buffer = totalIncome - directIncome; // 日当・副収入などのバッファー
-  const remaining = spendableAmount + buffer + directIncome - totalExpenses;
+  // バッファー・直接収入を含めた実質使える予算（進捗バー・ペースラインの基準）
+  const totalBudget = spendableAmount + totalIncome;
+  const remaining = totalBudget - totalExpenses;
   const usageRate =
-    spendableAmount > 0
-      ? Math.round((totalExpenses / spendableAmount) * 1000) / 10
+    totalBudget > 0
+      ? Math.round((totalExpenses / totalBudget) * 1000) / 10
       : 0;
 
   // カテゴリ別集計
@@ -115,7 +117,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
 
   // 理想ペースライン（使用可能額を日割り）
   const idealDailyBudget =
-    spendableAmount > 0 ? spendableAmount / daysInMonth : 0;
+    totalBudget > 0 ? totalBudget / daysInMonth : 0;
 
   // 税金内訳（額面設定がある場合）
   let taxBreakdown = null;
@@ -204,6 +206,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
     grossIncome: plan?.grossIncome ?? null,
     savingTargetAmount,
     spendableAmount,
+    totalBudget,
     totalExpenses,
     totalIncome,
     buffer,

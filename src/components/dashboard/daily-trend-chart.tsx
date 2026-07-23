@@ -25,7 +25,7 @@ interface DailyData {
 interface DailyTrendChartProps {
   data: DailyData[];
   idealDailyBudget: number;
-  spendableAmount: number;
+  totalBudget: number;
   daysInMonth: number;
 }
 
@@ -34,7 +34,7 @@ type ChartMode = "daily" | "cumulative";
 export function DailyTrendChart({
   data,
   idealDailyBudget,
-  spendableAmount,
+  totalBudget,
   daysInMonth,
 }: DailyTrendChartProps) {
   const [mode, setMode] = useState<ChartMode>("cumulative");
@@ -116,10 +116,10 @@ export function DailyTrendChart({
                 ]}
                 labelFormatter={(label) => `${label}`}
               />
-              {/* 使用可能額ライン */}
-              {spendableAmount > 0 && (
+              {/* 使用可能額ライン（バッファー・直接収入込み） */}
+              {totalBudget > 0 && (
                 <ReferenceLine
-                  y={spendableAmount}
+                  y={totalBudget}
                   stroke="#ef4444"
                   strokeDasharray="4 4"
                   label={{ value: "上限", position: "right", fontSize: 10 }}
