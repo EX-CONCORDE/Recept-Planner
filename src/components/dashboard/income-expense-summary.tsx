@@ -13,6 +13,7 @@ import { formatYen } from "@/lib/format";
 import { TrendingUp, TrendingDown, Scale } from "lucide-react";
 
 interface IncomeExpenseSummaryProps {
+  monthlyIncome: number;
   totalIncome: number;
   totalExpenses: number;
   buffer: number;
@@ -31,21 +32,32 @@ interface IncomeExpenseSummaryProps {
 }
 
 export function IncomeExpenseSummary({
+  monthlyIncome,
   totalIncome,
   totalExpenses,
   buffer,
   byCategory,
   incomeByCategory,
 }: IncomeExpenseSummaryProps) {
-  const netBalance = totalIncome - totalExpenses;
+  // 月収（給与）+ 取引に記録された収入（バッファー・直接収入等）の合計
+  const totalIncomeWithSalary = monthlyIncome + totalIncome;
+  const netBalance = totalIncomeWithSalary - totalExpenses;
+
+  // 月収を先頭に加えた収入内訳
+  const incomeBreakdown = [
+    ...(monthlyIncome > 0
+      ? [{ categoryId: -1, categoryName: "月収（給与）", total: monthlyIncome, count: 0 }]
+      : []),
+    ...incomeByCategory,
+  ];
 
   // 円グラフ用データ（収入と支出）
   const pieData = [
-    { name: "収入", value: totalIncome },
+    { name: "収入", value: totalIncomeWithSalary },
     { name: "支出", value: totalExpenses },
   ].filter((d) => d.value > 0);
 
-  const hasData = totalIncome > 0 || totalExpenses > 0;
+  const hasData = totalIncomeWithSalary > 0 || totalExpenses > 0;
 
   return (
     <Card>
@@ -59,7 +71,7 @@ export function IncomeExpenseSummary({
             <TrendingUp className="h-4 w-4 mx-auto text-green-600 mb-1" />
             <p className="text-[10px] text-muted-foreground">収入</p>
             <p className="text-sm font-bold text-green-600">
-              {formatYen(totalIncome)}
+              {formatYen(totalIncomeWithSalary)}
             </p>
           </div>
           <div className="rounded-lg bg-red-50 dark:bg-red-950 p-2.5">
@@ -117,13 +129,13 @@ export function IncomeExpenseSummary({
         )}
 
         {/* 収入の内訳 */}
-        {incomeByCategory.length > 0 && (
+        {incomeBreakdown.length > 0 && (
           <div>
             <p className="text-xs font-semibold text-muted-foreground mb-1.5">
               収入の内訳
             </p>
             <div className="space-y-1">
-              {incomeByCategory.map((item) => (
+              {incomeBreakdown.map((item) => (
                 <div
                   key={item.categoryId}
                   className="flex items-center justify-between text-sm"

@@ -181,6 +181,7 @@ export default function DashboardPage() {
             {/* 右カラム: 収支サマリー + 税金 + チャート + 取引 */}
             <div className="space-y-4">
               <IncomeExpenseSummary
+                monthlyIncome={data.monthlyIncome}
                 totalIncome={data.totalIncome}
                 totalExpenses={data.totalExpenses}
                 buffer={data.buffer}
