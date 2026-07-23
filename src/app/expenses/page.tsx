@@ -26,6 +26,7 @@ interface Transaction {
   memo: string | null;
   categoryId: number | null;
   category: { name: string } | null;
+  directToBalance: boolean;
 }
 
 export default function ExpensesPage() {
@@ -45,6 +46,7 @@ export default function ExpensesPage() {
   const [categoryId, setCategoryId] = useState("");
   const [merchantName, setMerchantName] = useState("");
   const [memo, setMemo] = useState("");
+  const [directToBalance, setDirectToBalance] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -68,6 +70,7 @@ export default function ExpensesPage() {
     setCategoryId("");
     setMerchantName("");
     setMemo("");
+    setDirectToBalance(false);
     setShowForm(false);
   }
 
@@ -83,6 +86,7 @@ export default function ExpensesPage() {
         categoryId: categoryId ? Number(categoryId) : null,
         merchantName: merchantName || null,
         memo: memo || null,
+        directToBalance: txType === "income" ? directToBalance : false,
       }),
     });
     const json = await res.json();
@@ -181,6 +185,22 @@ export default function ExpensesPage() {
               onChange={(e) => setMemo(e.target.value)}
             />
           </div>
+          {txType === "income" && (
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={directToBalance}
+                onChange={(e) => setDirectToBalance(e.target.checked)}
+              />
+              <span>
+                バッファーを介さず直接残高に加算する
+                <span className="block text-xs text-muted-foreground">
+                  割り勘の返金など、収入として扱いたくない場合はON
+                </span>
+              </span>
+            </label>
+          )}
           <Button type="submit" className="w-full">
             登録
           </Button>
@@ -220,6 +240,11 @@ export default function ExpensesPage() {
                   {tx.category && (
                     <span className="rounded bg-secondary px-1.5 py-0.5">
                       {tx.category.name}
+                    </span>
+                  )}
+                  {tx.directToBalance && (
+                    <span className="rounded bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300 px-1.5 py-0.5">
+                      残高直接
                     </span>
                   )}
                 </div>

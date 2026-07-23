@@ -11,6 +11,7 @@ export const createTransactionSchema = z.object({
   memo: z.string().max(500).nullable().default(null),
   receiptId: z.number().int().positive().nullable().default(null),
   source: z.enum(["manual", "ai", "subscription"]).default("manual"),
+  directToBalance: z.boolean().default(false),
 });
 
 export const updateTransactionSchema = createTransactionSchema.partial();

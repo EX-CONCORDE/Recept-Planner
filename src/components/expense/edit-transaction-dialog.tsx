@@ -26,6 +26,7 @@ interface Transaction {
   merchantName: string | null;
   memo: string | null;
   categoryId: number | null;
+  directToBalance: boolean;
 }
 
 interface EditTransactionDialogProps {
@@ -55,6 +56,9 @@ export function EditTransactionDialog({
     transaction.merchantName ?? "",
   );
   const [memo, setMemo] = useState(transaction.memo ?? "");
+  const [directToBalance, setDirectToBalance] = useState(
+    transaction.directToBalance,
+  );
   const [saving, setSaving] = useState(false);
 
   const filteredCategories = categories.filter((c) => c.type === txType);
@@ -71,6 +75,7 @@ export function EditTransactionDialog({
         categoryId: categoryId ? Number(categoryId) : null,
         merchantName: merchantName || null,
         memo: memo || null,
+        directToBalance: txType === "income" ? directToBalance : false,
       }),
     });
     const json = await res.json();
@@ -154,6 +159,22 @@ export function EditTransactionDialog({
               onChange={(e) => setMemo(e.target.value)}
             />
           </div>
+          {txType === "income" && (
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={directToBalance}
+                onChange={(e) => setDirectToBalance(e.target.checked)}
+              />
+              <span>
+                バッファーを介さず直接残高に加算する
+                <span className="block text-xs text-muted-foreground">
+                  割り勘の返金など、収入として扱いたくない場合はON
+                </span>
+              </span>
+            </label>
+          )}
           <div className="flex gap-2">
             <Button
               variant="outline"

@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatYen } from "@/lib/format";
-import { AlertTriangle, Clock, PiggyBank, TrendingDown, Wallet } from "lucide-react";
+import { AlertTriangle, Clock, PiggyBank, TrendingDown, Wallet, ArrowDownToLine } from "lucide-react";
 
 interface BudgetOverviewProps {
   monthlyIncome: number;
@@ -10,6 +10,7 @@ interface BudgetOverviewProps {
   spendableAmount: number;
   totalExpenses: number;
   buffer: number;
+  directIncome: number;
   remaining: number;
   usageRate: number;
   isOverBudget: boolean;
@@ -23,6 +24,7 @@ export function BudgetOverview({
   spendableAmount,
   totalExpenses,
   buffer,
+  directIncome,
   remaining,
   usageRate,
   isOverBudget,
@@ -41,7 +43,7 @@ export function BudgetOverview({
     now.getFullYear() === ymYear && now.getMonth() + 1 === ymMonth;
   const elapsedDays = isCurrentMonth ? now.getDate() : daysInMonth;
   const dailyAverage = elapsedDays > 0 ? totalExpenses / elapsedDays : 0;
-  const totalBudget = spendableAmount + buffer;
+  const totalBudget = spendableAmount + buffer + directIncome;
 
   let depletionDay: number | null = null;
   if (dailyAverage > 0 && !isOverBudget && isCurrentMonth && totalBudget > 0) {
@@ -99,6 +101,17 @@ export function BudgetOverview({
                 </span>
                 <span className="font-semibold">
                   +{formatYen(buffer)}
+                </span>
+              </div>
+            )}
+            {directIncome > 0 && (
+              <div className="flex justify-between text-teal-600">
+                <span className="flex items-center gap-1">
+                  <ArrowDownToLine className="h-3.5 w-3.5" />
+                  残高への直接収入
+                </span>
+                <span className="font-semibold">
+                  +{formatYen(directIncome)}
                 </span>
               </div>
             )}

@@ -24,6 +24,7 @@ interface DashboardData {
   totalExpenses: number;
   totalIncome: number;
   buffer: number;
+  directIncome: number;
   remaining: number;
   usageRate: number;
   isOverBudget: boolean;
@@ -155,6 +156,7 @@ export default function DashboardPage() {
                 spendableAmount={data.spendableAmount}
                 totalExpenses={data.totalExpenses}
                 buffer={data.buffer}
+                directIncome={data.directIncome}
                 remaining={data.remaining}
                 usageRate={data.usageRate}
                 isOverBudget={data.isOverBudget}

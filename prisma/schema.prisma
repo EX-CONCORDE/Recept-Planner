@@ -21,19 +21,20 @@ model Category {
 }
 
 model Transaction {
-  id             Int       @id @default(autoincrement())
-  txType         String    @map("tx_type") @db.VarChar(20) // expense | income
-  amount         Int       // 日本円（整数）
-  txDate         DateTime  @map("tx_date") @db.Date
-  categoryId     Int?      @map("category_id")
-  merchantName   String?   @map("merchant_name") @db.VarChar(300)
-  memo           String?   @db.VarChar(500)
-  receiptId      Int?      @map("receipt_id")
-  source         String    @default("manual") @db.VarChar(20) // manual | ai | subscription
-  subscriptionId Int?      @map("subscription_id")
-  billingKey     String?   @unique @map("billing_key") @db.VarChar(100) // subscriptionId:YYYY-MM-DD
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  id              Int       @id @default(autoincrement())
+  txType          String    @map("tx_type") @db.VarChar(20) // expense | income
+  amount          Int       // 日本円（整数）
+  txDate          DateTime  @map("tx_date") @db.Date
+  categoryId      Int?      @map("category_id")
+  merchantName    String?   @map("merchant_name") @db.VarChar(300)
+  memo            String?   @db.VarChar(500)
+  receiptId       Int?      @map("receipt_id")
+  source          String    @default("manual") @db.VarChar(20) // manual | ai | subscription
+  directToBalance Boolean   @default(false) @map("direct_to_balance") // true: バッファーを介さず直接残高に加算（割り勘の返金等）
+  subscriptionId  Int?      @map("subscription_id")
+  billingKey      String?   @unique @map("billing_key") @db.VarChar(100) // subscriptionId:YYYY-MM-DD
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
   category     Category?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   receipt      Receipt?      @relation(fields: [receiptId], references: [id], onDelete: SetNull)

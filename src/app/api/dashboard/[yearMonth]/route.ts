@@ -40,9 +40,14 @@ export async function GET(_request: NextRequest, { params }: Params) {
     .filter((t) => t.txType === "income")
     .reduce((sum, t) => sum + t.amount, 0);
 
+  // 直接残高に加算される収入（割り勘の返金等）はバッファーに含めない
+  const directIncome = transactions
+    .filter((t) => t.txType === "income" && t.directToBalance)
+    .reduce((sum, t) => sum + t.amount, 0);
+
   const spendableAmount = monthlyIncome - savingTargetAmount;
-  const buffer = totalIncome; // 日当・副収入などのバッファー
-  const remaining = spendableAmount + buffer - totalExpenses;
+  const buffer = totalIncome - directIncome; // 日当・副収入などのバッファー
+  const remaining = spendableAmount + buffer + directIncome - totalExpenses;
   const usageRate =
     spendableAmount > 0
       ? Math.round((totalExpenses / spendableAmount) * 1000) / 10
@@ -202,6 +207,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
     totalExpenses,
     totalIncome,
     buffer,
+    directIncome,
     remaining,
     usageRate,
     isOverBudget: remaining < 0,
