@@ -1,9 +1,9 @@
 import { readFile } from "node:fs/promises";
 import sharp from "sharp";
-import { getGeminiSettings } from "@/lib/gemini-settings";
+import { getAiSettings } from "@/lib/ai-settings";
 
 export async function resizeAndEncode(filePath: string): Promise<string> {
-  const settings = await getGeminiSettings();
+  const settings = await getAiSettings();
   const buffer = await readFile(filePath);
   const resized = await sharp(buffer)
     .resize(settings.receiptImageMaxDimension, settings.receiptImageMaxDimension, {

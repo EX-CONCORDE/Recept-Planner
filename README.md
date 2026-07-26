@@ -2,7 +2,7 @@
 
 レシート・請求書のスクリーンショットをAIで読み取り、支出・収入・貯金・サブスクをまとめて管理する個人用の家計簿Webアプリ。
 
-Next.js + PostgreSQL + Gemini APIで構築。LAN内で自分専用サーバーとして動かすことを想定しており、認証機能はありません。
+Next.js + PostgreSQL + Gemini API（またはLM Studio経由のローカルLLM）で構築。LAN内で自分専用サーバーとして動かすことを想定しており、認証機能はありません。
 
 ## 目次
 
@@ -14,7 +14,7 @@ Next.js + PostgreSQL + Gemini APIで構築。LAN内で自分専用サーバー�
 - [Ubuntu Server（Proxmox VM）への新規デプロイ](#ubuntu-serverproxmox-vmへの新規デプロイ)
 - [サーバーの更新（コード変更を反映する）](#サーバーの更新コード変更を反映する)
 - [環境変数](#環境変数)
-- [Geminiモデル設定](#geminiモデル設定)
+- [AIモデル設定](#aiモデル設定)
 - [データモデル](#データモデル)
 - [セキュリティ](#セキュリティ)
 - [バックアップ](#バックアップ)
@@ -33,8 +33,8 @@ Next.js + PostgreSQL + Gemini APIで構築。LAN内で自分専用サーバー�
 - **収支サマリー**: 月収（給与）＋バッファー＋直接収入をまとめた収入合計と支出・収支差額を表示。カテゴリ別の内訳付き
 
 ### レシート・支出登録
-- **レシートAI読み取り**: カメラ撮影/画像アップロード → Gemini APIで金額・店名・カテゴリを自動抽出し、確認画面で編集して登録
-- **画像縮小**: アップロード画像をサーバー側で指定サイズ・品質にリサイズしてからGeminiへ送信し、トークンコストを削減
+- **レシートAI読み取り**: カメラ撮影/画像アップロード → Gemini API（またはLM Studio経由のローカルLLM）で金額・店名・カテゴリを自動抽出し、確認画面で編集して登録
+- **画像縮小**: アップロード画像をサーバー側で指定サイズ・品質にリサイズしてからAIへ送信し、トークンコストを削減
 - **手動登録・編集**: 支出/収入を金額・日付・カテゴリ・店名・メモ付きで手動登録、一覧から編集・削除
 
 ### サブスクリプション管理
@@ -56,13 +56,13 @@ Next.js + PostgreSQL + Gemini APIで構築。LAN内で自分専用サーバー�
 - **来年度住民税予測**: 今年の額面収入から来年6月〜再来年5月の住民税天引き額を概算表示
 
 ### AI家計アシスタント
-- **チャットで家計相談**: Geminiと会話しながら、記録済みの購入履歴・カテゴリ別集計・サブスク・貯金状況を参照した回答を取得
+- **チャットで家計相談**: 選択中のAI（Gemini/LM Studio）と会話しながら、記録済みの購入履歴・カテゴリ別集計・サブスク・貯金状況を参照した回答を取得
 - **チャットから支出/収入を登録**: 「今日コンビニで500円使った」のような発言から取引を自動作成（許可されたDB操作のみに限定）
 - **AIアドバイス**: 現在の支出傾向から改善案を月ごとに生成し、次回更新まで保存表示
 
 ### その他
 - **カテゴリ管理**: 支出/収入カテゴリの追加・編集・削除（デフォルトカテゴリはシードで投入）
-- **Gemini設定GUI**: APIキー・モデル・APIベースURL・画像縮小設定をブラウザの `/settings` から保存（DB保存、環境変数はフォールバックとしてのみ使用）
+- **AIプロバイダ設定GUI**: Gemini APIとLM Studio（ローカルLLM）をブラウザの `/settings` から切り替え・保存（DB保存、環境変数はフォールバックとしてのみ使用）
 - **レスポンシブ**: スマホはボトムナビ、PCはサイドバー＋2カラムレイアウト
 
 ## 画面構成
@@ -74,14 +74,14 @@ Next.js + PostgreSQL + Gemini APIで構築。LAN内で自分専用サーバー�
 | `/upload` | レシート撮影/アップロード → AI抽出 → 確認登録 |
 | `/subscriptions` | サブスクリプションの一覧・登録・編集 |
 | `/categories` | カテゴリ管理 |
-| `/settings` | Gemini設定、対象月選択、額面月収・税金設定、手取り月収、貯金目標 |
+| `/settings` | AIプロバイダ設定（Gemini/LM Studio）、対象月選択、額面月収・税金設定、手取り月収、貯金目標 |
 
 ## 技術スタック
 
 - **フロント**: Next.js 16 (App Router) + TypeScript + Tailwind CSS + shadcn/ui + Recharts
 - **DB**: PostgreSQL 16 (Docker)
 - **ORM**: Prisma v7（`@prisma/adapter-pg` によるドライバーアダプタ構成）
-- **AI**: Gemini API（Vision対応モデル）
+- **AI**: Gemini API（Vision対応モデル） / LM Studio経由のローカルLLM（Gemma 4 E4Bなど）を切り替え可能
 - **画像処理**: sharp（レシート画像のリサイズ）
 - **バリデーション**: Zod v4
 
@@ -91,7 +91,7 @@ Next.js + PostgreSQL + Gemini APIで構築。LAN内で自分専用サーバー�
 
 - Node.js 22+
 - Docker & Docker Compose
-- （AI機能を使う場合）Gemini APIキー
+- （AI機能を使う場合）Gemini APIキー、またはLM Studioをローカルで起動しておく
 
 ### 手順
 
@@ -183,7 +183,7 @@ cd Recept-Planner
 cp .env.example .env
 nano .env
 # → DATABASE_URL のパスワードを変更
-# → Gemini APIキーやモデルは起動後に /settings から設定可能
+# → AIプロバイダ（Gemini / LM Studio）・APIキー・モデルは起動後に /settings から設定可能
 ```
 
 ### 3A. Docker で起動（推奨）
@@ -332,7 +332,11 @@ RECEIPT_IMAGE_JPEG_QUALITY="80"
 
 Docker Compose本番構成では `POSTGRES_PASSWORD` を環境変数としてエクスポートして使用します（`docker-compose.prod.yml` 参照）。
 
-## Geminiモデル設定
+## AIモデル設定
+
+`/settings` 画面でAIプロバイダを Gemini API / LM Studio（ローカルLLM）から選択できます。レシート読み取り・家計アシスタント・AIアドバイスは、選択中のプロバイダをすべて共通で使用します。
+
+### Gemini API
 
 | モデル | 用途 | コスト感 |
 |--------|------|----------|
@@ -340,11 +344,22 @@ Docker Compose本番構成では `POSTGRES_PASSWORD` を環境変数としてエ
 | `gemini-2.5-flash` | 精度と速度のバランス重視 | 中 |
 | `gemini-2.5-pro` | 読み取り精度を優先する場合 | 高 |
 
-写真取り込みはアップロード画像をサーバー側で最大1024pxに縮小してからGeminiへ送るため、元画像をそのまま投げるより入力トークンを抑えます。コストをさらに抑える場合は `GEMINI_MODEL=gemini-2.5-flash-lite` のまま使い、`RECEIPT_IMAGE_MAX_DIMENSION=768` などに下げてください。
+写真取り込みはアップロード画像をサーバー側で最大1024pxに縮小してからAIへ送るため、元画像をそのまま投げるより入力トークンを抑えます。コストをさらに抑える場合は `GEMINI_MODEL=gemini-2.5-flash-lite` のまま使い、`RECEIPT_IMAGE_MAX_DIMENSION=768` などに下げてください。
 
-Gemini APIキー、モデル、API URL、画像縮小設定はアプリの `/settings` 画面から保存できます。保存先はPostgreSQLの `app_settings` テーブルです。環境変数は初期値・フォールバックとしてのみ使います。
+### LM Studio（ローカルLLM）
 
-レシート読み取り、家計アシスタント、AIアドバイスはすべて同じGemini設定を使います。会話履歴は `assistant_messages`、保存済みアドバイスは `financial_advice` に月別で保存されます。チャットからDBを変更できる操作はアプリ側で許可したものだけに制限しており、現在は支出/収入の追加に対応しています。
+[LM Studio](https://lmstudio.ai/) でモデル（例: Gemma 4 E4B）をダウンロードし、「Developer」タブでローカルサーバーを起動してから使用します。LM Studioはローカル開発マシン上でのみ動作するため、本番（Docker）デプロイからの利用は想定していません。
+
+- `LMSTUDIO_BASE_URL`: LM Studioのローカルサーバー URL（既定値 `http://localhost:1234/v1`）
+- `LMSTUDIO_MODEL`: LM Studioに読み込んだモデルの識別子（LM Studio画面に表示される名前。例: `google/gemma-4-e4b`）
+
+LM Studioが起動していない状態でAIリクエストを送ると、接続エラーである旨のメッセージを返します。
+
+### 共通設定
+
+AIプロバイダ、Gemini APIキー・モデル・API URL、LM StudioのURL・モデル、画像縮小設定はアプリの `/settings` 画面から保存できます。保存先はPostgreSQLの `app_settings` テーブルです。環境変数は初期値・フォールバックとしてのみ使います。
+
+会話履歴は `assistant_messages`、保存済みアドバイスは `financial_advice` に月別で保存されます。チャットからDBを変更できる操作はアプリ側で許可したものだけに制限しており、現在は支出/収入の追加に対応しています。
 
 ## データモデル
 
@@ -358,7 +373,7 @@ Gemini APIキー、モデル、API URL、画像縮小設定はアプリの `/set
 | `monthly_plans` | 月ごとの手取り月収・額面月収・貯金目標などの設定（YYYY-MM単位） |
 | `savings_goals` | 貯金目標（複数管理可） |
 | `subscriptions` | サブスクリプション定義と次回請求日 |
-| `app_settings` | Gemini設定などのアプリ内設定（key-value） |
+| `app_settings` | AIプロバイダ設定（Gemini/LM Studio）などのアプリ内設定（key-value） |
 | `assistant_messages` | AIアシスタントの会話履歴 |
 | `financial_advice` | 月別に保存されたAIアドバイス |
 
