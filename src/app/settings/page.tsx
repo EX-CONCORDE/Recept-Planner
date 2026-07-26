@@ -329,7 +329,7 @@ export default function SettingsPage() {
                   placeholder="http://localhost:1234/v1"
                 />
                 <p className="text-[10px] text-muted-foreground">
-                  LM Studioの「Developer」タブでローカルサーバーを起動した際のURL
+                  LM Studioの「Developer」タブでローカルサーバーを起動した際のURL（末尾に/v1が無くても自動補完されます）
                 </p>
               </div>
 

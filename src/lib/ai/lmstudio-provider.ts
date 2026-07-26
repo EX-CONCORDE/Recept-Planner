@@ -28,8 +28,11 @@ interface OpenAiMessage {
   content: string | OpenAiContentPart[];
 }
 
-function trimBaseUrl(url: string): string {
-  return url.replace(/\/$/, "");
+// LM Studioの画面には "http://localhost:1234" とだけ表示されることが多く、
+// OpenAI互換エンドポイントに必要な /v1 が抜けやすいため自動で補う
+function normalizeBaseUrl(url: string): string {
+  const trimmed = url.replace(/\/$/, "");
+  return /\/v1$/.test(trimmed) ? trimmed : `${trimmed}/v1`;
 }
 
 function toOpenAiMessage(content: AiContent): OpenAiMessage {
@@ -84,7 +87,7 @@ export function createLmStudioProvider(
       const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
       try {
-        const res = await fetch(`${trimBaseUrl(settings.baseUrl)}/chat/completions`, {
+        const res = await fetch(`${normalizeBaseUrl(settings.baseUrl)}/chat/completions`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
